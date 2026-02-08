@@ -101,6 +101,16 @@ export const subjectsApi = {
   },
 }
 
+export const notifyApi = {
+  async notifyDueTomorrow() {
+    const res = await fetch(`${API_BASE}/notify/due-tomorrow`, {
+      method: 'POST',
+      headers: getHeaders(),
+    })
+    return handleRes(res)
+  },
+}
+
 export const assignmentsApi = {
   async list() {
     const res = await fetch(`${API_BASE}/assignments`, { headers: getHeaders() })

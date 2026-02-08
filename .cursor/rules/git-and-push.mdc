@@ -1,0 +1,15 @@
+---
+description: Use Git to commit and push changes; keep repo in sync with GitHub
+alwaysApply: true
+---
+
+# Git and push
+
+- When you make code or doc changes in this project, **commit and push** them so the repo stays in sync with GitHub.
+- Work from the **project root** (`GradePlanner`). Use:
+  - `git add <paths>` or `git add .` for the changed files
+  - `git commit -m "Clear, one-line message"`
+  - `git push origin main` (or the current branch)
+- Prefer one commit per logical change; batch small related edits into a single commit when it makes sense.
+- If the user asks not to push, or Git is not available in the environment, skip the push and tell them to push manually.
+- Remote is **origin** (https://github.com/kenigdav/GradePlanner). Do not change the remote URL unless the user asks.

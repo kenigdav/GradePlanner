@@ -40,6 +40,18 @@ Change this password after first login (Change password in the header).
 
 Your code will be on GitHub; you can then connect the repo to Render (or another host) to deploy.
 
+### Git in Cursor (so the AI can push for you)
+
+For Cursor’s agent to run `git push` from the integrated terminal:
+
+1. **Install Git** from [git-scm.com](https://git-scm.com/) if needed. During setup, choose **“Git from the command line and also from 3rd-party software”** so it’s on PATH.
+2. **Restart Cursor** (or open a new terminal) so the terminal picks up Git.
+3. **Authenticate once** so push works without a prompt:
+   - In a terminal at the project root, run: `git push origin main`.
+   - When asked for credentials, use your GitHub username and a **Personal Access Token** (Settings → Developer settings → Personal access tokens on GitHub) as the password. Windows will store them for future pushes.
+
+After that, the project rule in `.cursor/rules/git-and-push.mdc` tells the agent to commit and push changes when it edits code.
+
 ## Run locally
 
 1. **Install dependencies** (once):
@@ -93,6 +105,32 @@ One server serves both the API and the built frontend at http://localhost:3001. 
 
 The app runs as a **single process**: the Node server serves the API and the built frontend. No separate static host needed.
 
+### Deploy on Render (free, recommended)
+
+1. Go to [render.com](https://render.com) and sign up (or sign in with GitHub).
+
+2. **New** → **Web Service**.
+
+3. **Connect** your repo: choose **GitHub** and select **kenigdav/GradePlanner** (or paste `https://github.com/kenigdav/GradePlanner`). Click **Connect**.
+
+4. **Configure the service:**
+   - **Name:** e.g. `grade-planner`
+   - **Region:** pick one close to you
+   - **Root Directory:** leave blank
+   - **Runtime:** **Node**
+   - **Build Command:** `npm install --include=dev && npm run build && cd server && npm install --omit=dev`
+   - **Start Command:** `npm start`
+   - **Instance Type:** **Free**
+
+5. **Environment:**
+   - Click **Add Environment Variable**
+   - Add **Key:** `NODE_ENV`, **Value:** `production`
+   - Add **Key:** `JWT_SECRET`, **Value:** a long random string (e.g. generate one at [randomkeygen.com](https://randomkeygen.com) and pick a 64-character key)
+
+6. Click **Create Web Service**. Render will build and deploy. When it’s done, open the URL (e.g. `https://grade-planner-xxxx.onrender.com`).
+
+**Notes:** Free services spin down after ~15 minutes of no traffic (first load after that may take ~30–60 seconds). Data (users, assignments) is not persistent on the free tier—it resets on redeploy. For persistent data you’d need a database or a paid plan with a disk.
+
 ### Option 1: Docker (any cloud or VPS)
 
 1. **Build and run locally** (optional test):
@@ -130,3 +168,12 @@ The app runs as a **single process**: the Node server serves the API and the bui
 | `PORT`        | No       | Port to listen on (default `3001`). Many hosts set this automatically. |
 | `JWT_SECRET`  | Yes      | Secret used to sign JWTs. Use a long random string. |
 | `NODE_ENV`    | Yes for single-server | Set to `production` so the server serves the built frontend. |
+| **Email (for “Email due tomorrow”)** | | |
+| `SMTP_HOST`   | For email | SMTP server host (e.g. `smtp.gmail.com`). |
+| `SMTP_PORT`   | No       | SMTP port (default `587`). Use `465` for SSL. |
+| `SMTP_SECURE` | No       | Set to `true` for port 465. |
+| `SMTP_USER`   | For email | SMTP login. |
+| `SMTP_PASS`   | For email | SMTP password (or app password for Gmail). |
+| `FROM_EMAIL`  | No       | From address (defaults to `SMTP_USER`). |
+
+If SMTP is not set, only the “Email due tomorrow” feature is disabled; the rest of the app works.

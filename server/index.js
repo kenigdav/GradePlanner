@@ -7,6 +7,7 @@ import authRoutes from './routes/auth.js'
 import subjectRoutes from './routes/subjects.js'
 import userRoutes from './routes/users.js'
 import assignmentRoutes from './routes/assignments.js'
+import notifyRoutes from './routes/notify.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -27,6 +28,7 @@ app.use('/api/auth', authRoutes)
 app.use('/api/users', userRoutes)
 app.use('/api/assignments', assignmentRoutes)
 app.use('/api/subjects', subjectRoutes)
+app.use('/api/notify', notifyRoutes)
 
 // Production: serve built frontend and SPA fallback
 const isProduction = process.env.NODE_ENV === 'production'

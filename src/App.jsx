@@ -7,7 +7,7 @@ import { Register } from './Register'
 import { UserManagement } from './UserManagement'
 import { SubjectManagement } from './SubjectManagement'
 import { ChangePassword } from './ChangePassword'
-import { assignmentsApi } from './api'
+import { assignmentsApi, notifyApi } from './api'
 import './App.css'
 
 export default function App() {
@@ -21,6 +21,22 @@ export default function App() {
   const [showSubjectManagement, setShowSubjectManagement] = useState(false)
   const [showChangePassword, setShowChangePassword] = useState(false)
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false)
+  const [notifyStatus, setNotifyStatus] = useState(null)
+  const [notifyStatusOk, setNotifyStatusOk] = useState(false)
+
+  const handleNotifyDueTomorrow = async () => {
+    setNotifyStatus(null)
+    try {
+      const data = await notifyApi.notifyDueTomorrow()
+      setNotifyStatusOk(true)
+      setNotifyStatus(data.message || `Emails sent to ${data.sent} user(s).`)
+      setTimeout(() => { setNotifyStatus(null) }, 5000)
+    } catch (err) {
+      setNotifyStatusOk(false)
+      setNotifyStatus(err.message || 'Failed to send emails')
+      setTimeout(() => { setNotifyStatus(null) }, 6000)
+    }
+  }
 
   const handleSignOutClick = () => setShowSignOutConfirm(true)
   const handleSignOutConfirm = () => {
@@ -110,9 +126,14 @@ export default function App() {
               Change password
             </button>
             {user.role === 'administrator' && (
-              <button type="button" className="btn btn-ghost" onClick={() => setShowSubjectManagement(true)}>
-                Subject list
-              </button>
+              <>
+                <button type="button" className="btn btn-ghost" onClick={handleNotifyDueTomorrow}>
+                  Email due tomorrow
+                </button>
+                <button type="button" className="btn btn-ghost" onClick={() => setShowSubjectManagement(true)}>
+                  Subject list
+                </button>
+              </>
             )}
             {canManageUsers && (
               <button type="button" className="btn btn-ghost" onClick={() => setShowUserManagement(true)}>
@@ -123,6 +144,11 @@ export default function App() {
               Sign out
             </button>
           </div>
+          {notifyStatus && (
+            <p className={`header-notify-status ${notifyStatusOk ? 'header-notify-status--ok' : 'header-notify-status--err'}`}>
+              {notifyStatus}
+            </p>
+          )}
         </div>
       </header>
       <main className={`main ${!canEdit ? 'main--calendar-only' : ''}`}>
