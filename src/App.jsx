@@ -103,31 +103,13 @@ export default function App() {
   if (user.role === 'pending') {
     return (
       <div className="app app--auth">
-        <div className="auth-card">
+        <div className="auth-card auth-card--pending">
           <h1>Assignment Planner</h1>
           <p className="auth-hint">Your account is pending approval. A contributor or administrator must approve your access.</p>
-          <button type="button" className="btn btn-primary" onClick={handleSignOutClick}>
+          <button type="button" className="btn btn-primary" onClick={handleSignOutConfirm}>
             Sign out
           </button>
         </div>
-        {showSignOutConfirm && (
-          <div className="modal-backdrop" onClick={() => setShowSignOutConfirm(false)}>
-            <div className="modal-content modal-content--narrow" onClick={(e) => e.stopPropagation()}>
-              <div className="signout-confirm">
-                <h2>Sign out</h2>
-                <p>Are you sure you want to sign out?</p>
-                <div className="signout-confirm-actions">
-                  <button type="button" className="btn btn-ghost" onClick={() => setShowSignOutConfirm(false)}>
-                    Cancel
-                  </button>
-                  <button type="button" className="btn btn-primary" onClick={handleSignOutConfirm}>
-                    Sign out
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     )
   }
