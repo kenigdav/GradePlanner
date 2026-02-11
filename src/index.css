@@ -16,6 +16,20 @@
   --font-mono: 'JetBrains Mono', monospace;
 }
 
+[data-theme="light"] {
+  --bg: #f4f4f6;
+  --surface: #ffffff;
+  --surface-hover: #f0f0f2;
+  --border: #b8b8c4;
+  --text: #1a1a1e;
+  --text-muted: #6b6b76;
+  --accent: #6d5dd8;
+  --accent-hover: #7c6ef6;
+  --accent-muted: rgba(109, 93, 216, 0.15);
+  --success: #22c55e;
+  --danger: #dc2626;
+}
+
 * {
   box-sizing: border-box;
 }

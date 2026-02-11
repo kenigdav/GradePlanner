@@ -4,7 +4,9 @@ import { randomUUID } from 'crypto'
 import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const DATA_DIR = path.join(__dirname, 'files')
+const DATA_DIR = process.env.DATA_DIR
+  ? path.resolve(process.env.DATA_DIR)
+  : path.join(__dirname, 'files')
 const USERS_FILE = path.join(DATA_DIR, 'users.json')
 const ASSIGNMENTS_FILE = path.join(DATA_DIR, 'assignments.json')
 const SUBJECTS_FILE = path.join(DATA_DIR, 'subjects.json')

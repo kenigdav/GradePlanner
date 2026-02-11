@@ -18,6 +18,7 @@ router.get('/', authMiddleware, requireRole('viewer', 'contributor', 'administra
       email: u.email,
       username: u.username,
       role: u.role,
+      lastSeenAt: u.lastSeenAt || null,
     }
     if (isAdmin) base.banned = !!u.banned
     return base

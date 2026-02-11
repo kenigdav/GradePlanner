@@ -123,6 +123,26 @@
 .user-management-name {
   font-weight: 600;
   color: var(--text);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.user-management-status-dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.user-management-status-dot--online {
+  background: var(--success);
+  box-shadow: 0 0 0 2px rgba(74, 222, 128, 0.35);
+}
+
+.user-management-status-dot--offline {
+  background: var(--text-muted);
+  opacity: 0.7;
 }
 
 .user-management-meta {

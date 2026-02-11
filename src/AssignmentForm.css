@@ -51,19 +51,171 @@
   min-height: 4rem;
 }
 
-.assignment-form-images {
+.assignment-form-optional {
+  font-weight: 400;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.assignment-form-links {
+  min-height: 2.5rem;
+}
+
+.assignment-form-date-label {
+  position: relative;
+}
+
+.assignment-form-date-wrap {
+  position: relative;
+}
+
+.assignment-form-date-trigger {
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 0.95rem;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s;
+  font-family: inherit;
+}
+
+.assignment-form-date-trigger:hover {
+  border-color: var(--accent);
+}
+
+.assignment-form-date-wrap:focus-within .assignment-form-date-trigger {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.assignment-form-date-picker {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 50;
+  min-width: 240px;
+  padding: 0.6rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.assignment-form-date-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.assignment-form-date-picker-prev,
+.assignment-form-date-picker-next {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: color 0.15s, background 0.15s;
+}
+
+.assignment-form-date-picker-prev:hover,
+.assignment-form-date-picker-next:hover {
+  color: var(--accent);
+  background: var(--accent-muted);
+}
+
+.assignment-form-date-picker-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.assignment-form-date-picker-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  margin-bottom: 0.25rem;
+}
+
+.assignment-form-date-picker-weekday {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.assignment-form-date-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.assignment-form-date-picker-cell {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  font-family: inherit;
+}
+
+.assignment-form-date-picker-cell:hover {
+  background: var(--surface-hover);
+}
+
+.assignment-form-date-picker-cell--today {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.assignment-form-date-picker-cell--selected {
+  background: var(--accent-muted);
+  color: var(--accent);
+}
+
+.assignment-form-date-picker-cell--selected:hover {
+  background: var(--accent-muted);
+  color: var(--accent);
+}
+
+.assignment-form-date-picker-cell--empty {
+  cursor: default;
+  pointer-events: none;
+}
+
+.assignment-form-media {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
 }
 
-.assignment-form-images-label {
+.assignment-form-media-label {
   font-size: 0.8rem;
   font-weight: 500;
   color: var(--text-muted);
 }
 
-.assignment-form-images-zone {
+.assignment-form-media-zone {
   position: relative;
   border: 1px dashed var(--border);
   border-radius: var(--radius-sm);
@@ -72,12 +224,12 @@
   transition: border-color 0.15s;
 }
 
-.assignment-form-images-zone:focus-within {
+.assignment-form-media-zone:focus-within {
   border-color: var(--accent);
   outline: none;
 }
 
-.assignment-form-images-input {
+.assignment-form-media-input {
   position: absolute;
   width: 0;
   height: 0;
@@ -85,7 +237,7 @@
   pointer-events: none;
 }
 
-.assignment-form-images-trigger {
+.assignment-form-media-trigger {
   display: block;
   width: 100%;
   padding: 0.5rem;
@@ -98,18 +250,24 @@
   transition: color 0.15s, background 0.15s;
 }
 
-.assignment-form-images-trigger:hover {
+.assignment-form-media-trigger:hover {
   color: var(--accent);
   background: var(--accent-muted);
 }
 
-.assignment-form-images-list {
+.assignment-form-media-error {
+  margin: 0.35rem 0 0;
+  font-size: 0.9rem;
+  color: var(--danger);
+}
+
+.assignment-form-media-list {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
 }
 
-.assignment-form-images-item {
+.assignment-form-media-item {
   position: relative;
   width: 64px;
   height: 64px;
@@ -118,14 +276,43 @@
   background: var(--surface-hover);
 }
 
-.assignment-form-images-item img {
+.assignment-form-media-item img,
+.assignment-form-media-item video {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
 }
 
-.assignment-form-images-remove {
+.assignment-form-media-item--video video {
+  object-fit: contain;
+}
+
+.assignment-form-media-item--pdf {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.assignment-form-media-pdf-icon {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.assignment-form-media-badge {
+  position: absolute;
+  bottom: 2px;
+  left: 2px;
+  font-size: 0.55rem;
+  font-weight: 600;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.assignment-form-media-remove {
   position: absolute;
   top: 2px;
   right: 2px;
@@ -145,7 +332,7 @@
   transition: background 0.15s;
 }
 
-.assignment-form-images-remove:hover {
+.assignment-form-media-remove:hover {
   background: var(--danger);
 }
 

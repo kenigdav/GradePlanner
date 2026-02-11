@@ -10,6 +10,14 @@ const ROLES = [
   { value: 'administrator', label: 'Administrator' },
 ]
 
+const ONLINE_MS = 5 * 60 * 1000 // 5 minutes
+
+function isUserOnline(user, me) {
+  if (user.id === me?.id) return true
+  if (!user.lastSeenAt) return false
+  return Date.now() - new Date(user.lastSeenAt).getTime() < ONLINE_MS
+}
+
 export function UserManagement({ onClose }) {
   const { user: me, canChangeRoles, isAdmin, isContributor } = useAuth()
   const [users, setUsers] = useState([])
@@ -111,7 +119,14 @@ export function UserManagement({ onClose }) {
           {users.map((u) => (
             <div key={u.id} className={`user-management-row ${u.banned ? 'user-management-row--banned' : ''}`}>
               <div className="user-management-info">
-                <span className="user-management-name">{u.fullName}</span>
+                <span className="user-management-name">
+                  <span
+                    className={`user-management-status-dot ${isUserOnline(u, me) ? 'user-management-status-dot--online' : 'user-management-status-dot--offline'}`}
+                    title={isUserOnline(u, me) ? 'Online' : 'Offline'}
+                    aria-hidden
+                  />
+                  {u.fullName}
+                </span>
                 <span className="user-management-meta">{u.username} · {u.email}</span>
                 {u.banned && <span className="user-management-badge user-management-badge--banned">Banned</span>}
               </div>

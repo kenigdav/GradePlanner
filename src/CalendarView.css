@@ -2,13 +2,13 @@
   position: relative;
 }
 
-/* Day view panel (when a day is selected) */
+/* Day view panel (when a day is selected, below calendar) */
 .day-view-panel {
   background: var(--surface-hover);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 1.25rem;
-  margin-bottom: 1rem;
+  margin-top: 1rem;
 }
 
 .day-view-header {
@@ -380,14 +380,111 @@
   display: block;
 }
 
-.day-view-assignment-images {
+.assignment-detail-media-label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin: 0.75rem 0 0.35rem;
+}
+
+.assignment-detail-videos {
+  margin-top: 0.5rem;
+}
+
+.assignment-detail-video-wrap {
+  margin-top: 0.35rem;
+}
+
+.assignment-detail-video {
+  max-width: 100%;
+  max-height: 240px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  display: block;
+}
+
+.assignment-detail-pdfs-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}
+
+.assignment-detail-pdf-link {
+  font-size: 0.9rem;
+  color: var(--accent);
+  text-decoration: none;
+  padding: 0.35rem 0.6rem;
+  background: var(--accent-muted);
+  border-radius: var(--radius-sm);
+}
+
+.assignment-detail-pdf-link:hover {
+  text-decoration: underline;
+}
+
+.assignment-detail-links-list {
+  margin: 0.35rem 0 0;
+  padding-left: 1.25rem;
+  list-style: disc;
+}
+
+.assignment-detail-links-list li {
+  margin-bottom: 0.25rem;
+}
+
+.assignment-detail-link {
+  font-size: 0.9rem;
+  color: var(--accent);
+  word-break: break-all;
+}
+
+.assignment-detail-link:hover {
+  text-decoration: underline;
+}
+
+.day-view-assignment-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+  margin-top: 0.35rem;
+}
+
+.day-view-assignment-links a {
+  font-size: 0.75rem;
+  color: var(--accent);
+}
+
+.day-view-assignment-links a:hover {
+  text-decoration: underline;
+}
+
+.day-view-assignment-links-more {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.assignment-detail-video-modal {
+  max-width: min(90vw, 720px);
+}
+
+.assignment-detail-video-full {
+  max-width: 100%;
+  max-height: 70vh;
+  border-radius: var(--radius-sm);
+}
+
+.day-view-assignment-media {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 0.25rem;
   margin-top: 0.35rem;
 }
 
-.day-view-assignment-img-btn {
+.day-view-assignment-media-btn {
   padding: 0;
   border: none;
   background: none;
@@ -395,14 +492,16 @@
   border-radius: 3px;
   display: block;
   line-height: 0;
+  position: relative;
 }
 
-.day-view-assignment-img-btn:focus {
+.day-view-assignment-media-btn:focus {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
 
-.day-view-assignment-images img {
+.day-view-assignment-media-btn img,
+.day-view-assignment-media-btn video {
   width: 28px;
   height: 28px;
   object-fit: cover;
@@ -411,6 +510,43 @@
   display: block;
 }
 
+.day-view-assignment-media-btn--video video {
+  object-fit: contain;
+}
+
+.day-view-assignment-media-play {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 3px;
+  color: white;
+  font-size: 0.65rem;
+}
+
+.day-view-assignment-media-pdf {
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 0.2rem 0.4rem;
+  background: var(--surface-hover);
+  border-radius: 3px;
+  color: var(--accent);
+  text-decoration: none;
+  border: 1px solid var(--border);
+}
+
+.day-view-assignment-media-pdf:hover {
+  background: var(--accent-muted);
+}
+
+.day-view-assignment-media-more {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+/* Legacy class for assignment-detail images (unchanged) */
 .day-view-assignment-images-more {
   font-size: 0.7rem;
   color: var(--text-muted);

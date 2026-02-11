@@ -15,6 +15,9 @@ router.post('/', authMiddleware, requireRole('contributor', 'administrator'), (r
     subject: body.subject,
     description: body.description || '',
     images: body.images || [],
+    videos: body.videos || [],
+    pdfs: body.pdfs || [],
+    links: body.links || [],
     createdByUserId: req.user.id,
     createdByName: req.user.fullName || req.user.username || 'Unknown',
   })
@@ -28,7 +31,7 @@ router.patch('/:id', authMiddleware, requireRole('contributor', 'administrator')
     return res.status(404).json({ error: 'Assignment not found' })
   }
   const updates = req.body || {}
-  const allowed = ['date', 'subject', 'description', 'images']
+  const allowed = ['date', 'subject', 'description', 'images', 'videos', 'pdfs', 'links']
   const patch = {}
   for (const k of allowed) {
     if (updates[k] !== undefined) patch[k] = updates[k]

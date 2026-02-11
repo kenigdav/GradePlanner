@@ -129,7 +129,9 @@ The app runs as a **single process**: the Node server serves the API and the bui
 
 6. Click **Create Web Service**. Render will build and deploy. When it’s done, open the URL (e.g. `https://grade-planner-xxxx.onrender.com`).
 
-**Notes:** Free services spin down after ~15 minutes of no traffic (first load after that may take ~30–60 seconds). Data (users, assignments) is not persistent on the free tier—it resets on redeploy. For persistent data you’d need a database or a paid plan with a disk.
+**Notes:** Free services spin down after ~15 minutes of no traffic (first load after that may take ~30–60 seconds). Data (users, assignments) is not persistent on the free tier—it resets on redeploy.
+
+**Persistent disk on Render:** If you add a persistent disk and mount it (e.g. at `/data`), set the env var **`DATA_DIR`** to that path (e.g. `DATA_DIR=/data`). The app will store `users.json`, `assignments.json`, and `subjects.json` there, so data will survive redeploys.
 
 ### Option 1: Docker (any cloud or VPS)
 
@@ -168,6 +170,7 @@ The app runs as a **single process**: the Node server serves the API and the bui
 | `PORT`        | No       | Port to listen on (default `3001`). Many hosts set this automatically. |
 | `JWT_SECRET`  | Yes      | Secret used to sign JWTs. Use a long random string. |
 | `NODE_ENV`    | Yes for single-server | Set to `production` so the server serves the built frontend. |
+| `DATA_DIR`    | No       | Path to a persistent directory for users/assignments/subjects (e.g. Render disk mount). If not set, data is in `server/data/files/` (ephemeral on most hosts). |
 | **Email (for “Email due tomorrow”)** | | |
 | `SMTP_HOST`   | For email | SMTP server host (e.g. `smtp.gmail.com`). |
 | `SMTP_PORT`   | No       | SMTP port (default `587`). Use `465` for SSL. |

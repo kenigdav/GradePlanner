@@ -15,6 +15,12 @@
   position: relative;
 }
 
+.header-menu-wrap {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
 .header-actions {
   display: flex;
   flex-wrap: wrap;
@@ -22,6 +28,113 @@
   justify-content: center;
   gap: 0.5rem 1rem;
   margin-top: 1rem;
+}
+
+.header-menu-btn {
+  font-size: 0.9rem;
+  padding: 0.5rem 0.85rem;
+}
+
+/* Side menu */
+.side-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 200;
+  animation: side-menu-fade-in 0.2s ease-out;
+}
+
+.side-menu {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(280px, 85vw);
+  max-width: 280px;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  z-index: 201;
+  display: flex;
+  flex-direction: column;
+  animation: side-menu-slide-in 0.25s ease-out;
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
+}
+
+@keyframes side-menu-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes side-menu-slide-in {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+.side-menu-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.side-menu-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.side-menu-close {
+  padding: 0.35rem 0.6rem;
+  font-size: 1.5rem;
+  line-height: 1;
+  border-radius: var(--radius-sm);
+}
+
+.side-menu-nav {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 0.75rem 0;
+  overflow: auto;
+}
+
+.side-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  font-size: 0.95rem;
+  text-align: left;
+  border-radius: 0;
+  border: none;
+}
+
+.side-menu-item:hover {
+  background: var(--surface-hover);
+}
+
+.side-menu-item--block {
+  width: 100%;
+}
+
+.side-menu-spacer {
+  flex: 1;
+  min-height: 1rem;
+}
+
+.side-menu-item--signout {
+  margin-top: auto;
+  font-weight: 500;
+  color: var(--danger);
+}
+
+.side-menu-item--signout:hover {
+  background: rgba(248, 113, 113, 0.1);
+  color: var(--danger);
 }
 
 .header-user {
@@ -157,4 +270,19 @@
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.06em;
+}
+
+.theme-toggle {
+  font-size: 0.85rem;
+  padding: 0.4rem 0.75rem;
+}
+
+.theme-toggle--auth {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+}
+
+.app--auth {
+  position: relative;
 }

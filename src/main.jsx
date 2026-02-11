@@ -5,7 +5,12 @@ import { AuthProvider } from './AuthContext'
 import App from './App.jsx'
 import './index.css'
 
+const THEME_KEY = 'grade-planner-theme'
 const rootEl = document.getElementById('root')
+const savedTheme = localStorage.getItem(THEME_KEY) || 'dark'
+if (savedTheme === 'light' || savedTheme === 'dark') {
+  document.documentElement.setAttribute('data-theme', savedTheme)
+}
 if (!rootEl) {
   document.body.innerHTML = '<div style="padding:20;font-family:system-ui">No root element. Check index.html.</div>'
 } else if (window.location.protocol === 'file:') {

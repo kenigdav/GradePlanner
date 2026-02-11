@@ -10,9 +10,27 @@ import { ChangePassword } from './ChangePassword'
 import { assignmentsApi, notifyApi } from './api'
 import './App.css'
 
+const THEME_KEY = 'grade-planner-theme'
+
+function ThemeToggle({ theme, onToggle, className = '' }) {
+  const isLight = theme === 'light'
+  return (
+    <button
+      type="button"
+      className={`btn btn-ghost theme-toggle ${className}`}
+      onClick={onToggle}
+      aria-label={isLight ? 'Switch to dark mode' : 'Switch to light mode'}
+      title={isLight ? 'Dark mode' : 'Light mode'}
+    >
+      {isLight ? 'Dark' : 'Light'}
+    </button>
+  )
+}
+
 export default function App() {
   const { user, loading, logout, canEdit, canManageUsers } = useAuth()
   const [authScreen, setAuthScreen] = useState('login')
+  const [theme, setTheme] = useState(() => localStorage.getItem(THEME_KEY) || 'dark')
 
   const [assignments, setAssignments] = useState([])
   const [assignmentsLoading, setAssignmentsLoading] = useState(true)
@@ -23,6 +41,8 @@ export default function App() {
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false)
   const [notifyStatus, setNotifyStatus] = useState(null)
   const [notifyStatusOk, setNotifyStatusOk] = useState(false)
+  const [showSideMenu, setShowSideMenu] = useState(false)
+  const [pickedDueDate, setPickedDueDate] = useState(null)
 
   const handleNotifyDueTomorrow = async () => {
     setNotifyStatus(null)
@@ -63,6 +83,13 @@ export default function App() {
     loadAssignments()
   }, [user])
 
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    localStorage.setItem(THEME_KEY, theme)
+  }, [theme])
+
+  const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))
+
   const addAssignment = async (assignment) => {
     const created = await assignmentsApi.create(assignment)
     setAssignments((prev) => [...prev, created])
@@ -91,6 +118,7 @@ export default function App() {
   if (!user) {
     return (
       <div className="app app--auth">
+        <ThemeToggle theme={theme} onToggle={toggleTheme} className="theme-toggle--auth" />
         {authScreen === 'login' ? (
           <Login onSwitchToRegister={() => setAuthScreen('register')} />
         ) : (
@@ -103,6 +131,7 @@ export default function App() {
   if (user.role === 'pending') {
     return (
       <div className="app app--auth">
+        <ThemeToggle theme={theme} onToggle={toggleTheme} className="theme-toggle--auth" />
         <div className="auth-card auth-card--pending">
           <h1>Assignment Planner</h1>
           <p className="auth-hint">Your account is pending approval. A contributor or administrator must approve your access.</p>
@@ -114,35 +143,28 @@ export default function App() {
     )
   }
 
+  const closeMenu = () => setShowSideMenu(false)
+  const menuAction = (fn) => () => { closeMenu(); fn() }
+
   return (
     <div className="app">
       <header className="header">
         <div className="header-inner">
           <h1>Assignment Planner</h1>
           <p className="tagline">Track due dates by subject</p>
+          <div className="header-menu-wrap">
+            <button
+              type="button"
+              className="btn btn-ghost header-menu-btn"
+              onClick={() => setShowSideMenu(true)}
+              aria-label="Open menu"
+              aria-expanded={showSideMenu}
+            >
+              Menu
+            </button>
+          </div>
           <div className="header-actions">
             <span className="header-user">{user.fullName} ({user.role})</span>
-            <button type="button" className="btn btn-ghost" onClick={() => setShowChangePassword(true)}>
-              Change password
-            </button>
-            {user.role === 'administrator' && (
-              <>
-                <button type="button" className="btn btn-ghost" onClick={handleNotifyDueTomorrow}>
-                  Email due tomorrow
-                </button>
-                <button type="button" className="btn btn-ghost" onClick={() => setShowSubjectManagement(true)}>
-                  Subject list
-                </button>
-              </>
-            )}
-            {canManageUsers && (
-              <button type="button" className="btn btn-ghost" onClick={() => setShowUserManagement(true)}>
-                {user.role === 'administrator' ? 'User management' : user.role === 'contributor' ? 'Approve viewers' : 'Users'}
-              </button>
-            )}
-            <button type="button" className="btn btn-ghost" onClick={handleSignOutClick}>
-              Sign out
-            </button>
           </div>
           {notifyStatus && (
             <p className={`header-notify-status ${notifyStatusOk ? 'header-notify-status--ok' : 'header-notify-status--err'}`}>
@@ -151,11 +173,49 @@ export default function App() {
           )}
         </div>
       </header>
+      {showSideMenu && (
+        <>
+          <div className="side-menu-backdrop" onClick={closeMenu} aria-hidden="true" />
+          <aside className="side-menu" role="dialog" aria-label="Menu">
+            <div className="side-menu-header">
+              <h2 className="side-menu-title">Menu</h2>
+              <button type="button" className="btn btn-ghost side-menu-close" onClick={closeMenu} aria-label="Close menu">
+                ×
+              </button>
+            </div>
+            <nav className="side-menu-nav">
+              <button type="button" className="btn btn-ghost side-menu-item" onClick={menuAction(() => setShowChangePassword(true))}>
+                Change password
+              </button>
+              {user.role === 'administrator' && (
+                <>
+                  <button type="button" className="btn btn-ghost side-menu-item" onClick={menuAction(() => setShowSubjectManagement(true))}>
+                    Subject list
+                  </button>
+                  <button type="button" className="btn btn-ghost side-menu-item" onClick={menuAction(handleNotifyDueTomorrow)}>
+                    Email due tomorrow
+                  </button>
+                </>
+              )}
+              {canManageUsers && (
+                <button type="button" className="btn btn-ghost side-menu-item" onClick={menuAction(() => setShowUserManagement(true))}>
+                  {user.role === 'administrator' ? 'User management' : user.role === 'contributor' ? 'Approve viewers' : 'Users'}
+                </button>
+              )}
+              <ThemeToggle theme={theme} onToggle={toggleTheme} className="side-menu-item side-menu-item--block" />
+              <div className="side-menu-spacer" />
+              <button type="button" className="btn btn-ghost side-menu-item side-menu-item--signout" onClick={menuAction(handleSignOutClick)}>
+                Sign out
+              </button>
+            </nav>
+          </aside>
+        </>
+      )}
       <main className={`main ${!canEdit ? 'main--calendar-only' : ''}`}>
         {canEdit && (
           <section className="panel form-panel">
             <h2>Add assignment</h2>
-            <AssignmentForm onSubmit={addAssignment} />
+            <AssignmentForm onSubmit={addAssignment} suggestedDueDate={pickedDueDate} />
           </section>
         )}
         <section className="panel calendar-panel">
@@ -168,6 +228,7 @@ export default function App() {
               assignments={assignments}
               onDelete={canEdit ? deleteAssignment : undefined}
               onUpdateDate={canEdit ? updateAssignmentDate : undefined}
+              onDateClick={setPickedDueDate}
               canEdit={canEdit}
             />
           )}

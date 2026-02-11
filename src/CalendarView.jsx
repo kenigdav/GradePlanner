@@ -30,7 +30,7 @@ function dateKey(year, month, day) {
 
 const DRAG_TYPE = 'application/x-grade-planner-assignment-id'
 
-export function CalendarView({ assignments, onDelete, onUpdateDate, canEdit = true }) {
+export function CalendarView({ assignments, onDelete, onUpdateDate, onDateClick, canEdit = true }) {
   const [viewDate, setViewDate] = useState(() => new Date())
   const [selectedDate, setSelectedDate] = useState(null)
   const [dragOverDateKey, setDragOverDateKey] = useState(null)
@@ -38,6 +38,7 @@ export function CalendarView({ assignments, onDelete, onUpdateDate, canEdit = tr
   const [dragOverZone, setDragOverZone] = useState(null)
   const [selectedAssignmentId, setSelectedAssignmentId] = useState(null)
   const [enlargedImage, setEnlargedImage] = useState(null)
+  const [enlargedVideo, setEnlargedVideo] = useState(null)
   const monthChangeIntervalRef = useRef(null)
   const year = viewDate.getFullYear()
 
@@ -144,55 +145,6 @@ export function CalendarView({ assignments, onDelete, onUpdateDate, canEdit = tr
 
   return (
     <div className="calendar-view">
-      {selectedDate && (
-        <div className="day-view-panel">
-          <div className="day-view-header">
-            <h3 className="day-view-title">{formatFullDate(selectedDate)}</h3>
-            <button type="button" className="btn btn-ghost day-view-close" onClick={() => setSelectedDate(null)} aria-label="Close day view">
-              ×
-            </button>
-          </div>
-          <div className="day-view-assignments">
-            {dayAssignments.length === 0 ? (
-              <p className="day-view-empty">No assignments this day.</p>
-            ) : (
-              dayAssignments.map((a) => (
-                <div
-                  key={a.id}
-                  className={`day-view-assignment ${canEdit ? 'day-view-assignment--draggable' : ''}`}
-                  draggable={canEdit}
-                  onDragStart={canEdit ? (e) => handleDragStart(e, a.id) : undefined}
-                  onDragEnd={canEdit ? handleDragEnd : undefined}
-                >
-                  <div>
-                    <span className="day-view-assignment-subject">{a.subject}</span>
-                    {a.createdByName && <span className="day-view-assignment-author">Posted by {a.createdByName}</span>}
-                    {a.description && <p className="day-view-assignment-desc">{a.description}</p>}
-                    {a.images?.length > 0 && (
-                      <div className="day-view-assignment-images">
-                        {a.images.slice(0, 3).map((src, i) => (
-                          <button
-                            key={i}
-                            type="button"
-                            className="day-view-assignment-img-btn"
-                            onClick={(e) => { e.stopPropagation(); setEnlargedImage({ src, description: a.description || '' }) }}
-                          >
-                            <img src={src} alt="" />
-                          </button>
-                        ))}
-                        {a.images.length > 3 && <span className="day-view-assignment-images-more">+{a.images.length - 3}</span>}
-                      </div>
-                    )}
-                  </div>
-                  {canEdit && onDelete && (
-                    <button type="button" className="calendar-assignment-delete" onClick={() => onDelete(a.id)} aria-label={`Delete ${a.subject}`}>×</button>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      )}
       <div className="calendar-nav">
         <h3 className="calendar-title">
           {formatMonthYear(viewDate)}
@@ -235,7 +187,10 @@ export function CalendarView({ assignments, onDelete, onUpdateDate, canEdit = tr
               key={key}
               className={`calendar-day calendar-day--clickable ${isToday ? 'calendar-day--today' : ''} ${canEdit && dragOverDateKey === key ? 'calendar-day--drop-target' : ''}`}
               role="gridcell"
-              onClick={() => setSelectedDate(key)}
+              onClick={() => {
+                setSelectedDate(key)
+                onDateClick?.(key)
+              }}
               onDragOver={canEdit ? (e) => handleDragOver(e, key) : undefined}
               onDragLeave={canEdit ? handleDragLeave : undefined}
               onDrop={canEdit ? (e) => handleDrop(e, key) : undefined}
@@ -286,6 +241,87 @@ export function CalendarView({ assignments, onDelete, onUpdateDate, canEdit = tr
           <span className="calendar-month-zone-arrow">›</span>
         </button>
       </div>
+      {selectedDate && (
+        <div className="day-view-panel">
+          <div className="day-view-header">
+            <h3 className="day-view-title">{formatFullDate(selectedDate)}</h3>
+            <button type="button" className="btn btn-ghost day-view-close" onClick={() => setSelectedDate(null)} aria-label="Close day view">
+              ×
+            </button>
+          </div>
+          <div className="day-view-assignments">
+            {dayAssignments.length === 0 ? (
+              <p className="day-view-empty">No assignments this day.</p>
+            ) : (
+              dayAssignments.map((a) => (
+                <div
+                  key={a.id}
+                  className={`day-view-assignment ${canEdit ? 'day-view-assignment--draggable' : ''}`}
+                  draggable={canEdit}
+                  onDragStart={canEdit ? (e) => handleDragStart(e, a.id) : undefined}
+                  onDragEnd={canEdit ? handleDragEnd : undefined}
+                >
+                  <div>
+                    <span className="day-view-assignment-subject">{a.subject}</span>
+                    {a.createdByName && <span className="day-view-assignment-author">Posted by {a.createdByName}</span>}
+                    {a.description && <p className="day-view-assignment-desc">{a.description}</p>}
+                    {((a.images?.length || 0) + (a.videos?.length || 0) + (a.pdfs?.length || 0)) > 0 && (
+                      <div className="day-view-assignment-media">
+                        {a.images?.slice(0, 3).map((src, i) => (
+                          <button
+                            key={`img-${i}`}
+                            type="button"
+                            className="day-view-assignment-media-btn"
+                            onClick={(e) => { e.stopPropagation(); setEnlargedImage({ src, description: a.description || '' }) }}
+                          >
+                            <img src={src} alt="" />
+                          </button>
+                        ))}
+                        {a.videos?.slice(0, 2).map((src, i) => (
+                          <button
+                            key={`vid-${i}`}
+                            type="button"
+                            className="day-view-assignment-media-btn day-view-assignment-media-btn--video"
+                            onClick={(e) => { e.stopPropagation(); setEnlargedVideo(src) }}
+                          >
+                            <video src={src} muted preload="metadata" />
+                            <span className="day-view-assignment-media-play" aria-hidden>▶</span>
+                          </button>
+                        ))}
+                        {a.pdfs?.slice(0, 2).map((src, i) => (
+                          <a
+                            key={`pdf-${i}`}
+                            href={src}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="day-view-assignment-media-pdf"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            PDF
+                          </a>
+                        ))}
+                        {(Math.max(0, (a.images?.length || 0) - 3) + Math.max(0, (a.videos?.length || 0) - 2) + Math.max(0, (a.pdfs?.length || 0) - 2)) > 0 && (
+                          <span className="day-view-assignment-media-more">
+                            +{Math.max(0, (a.images?.length || 0) - 3) + Math.max(0, (a.videos?.length || 0) - 2) + Math.max(0, (a.pdfs?.length || 0) - 2)}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    {a.links?.length > 0 && (
+                      <div className="day-view-assignment-links">
+                        {a.links.slice(0, 2).map((href, i) => (
+                          <a key={i} href={href} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>Link</a>
+                        ))}
+                        {a.links.length > 2 && <span className="day-view-assignment-links-more">+{a.links.length - 2}</span>}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
       {selectedAssignment && (
         <div className="assignment-detail-panel">
           <div className="assignment-detail-header">
@@ -322,6 +358,56 @@ export function CalendarView({ assignments, onDelete, onUpdateDate, canEdit = tr
               ))}
             </div>
           )}
+          {selectedAssignment.videos?.length > 0 && (
+            <div className="assignment-detail-videos">
+              <span className="assignment-detail-media-label">Videos</span>
+              {selectedAssignment.videos.map((src, i) => (
+                <div key={i} className="assignment-detail-video-wrap">
+                  <video src={src} controls preload="metadata" className="assignment-detail-video" />
+                </div>
+              ))}
+            </div>
+          )}
+          {selectedAssignment.pdfs?.length > 0 && (
+            <div className="assignment-detail-pdfs">
+              <span className="assignment-detail-media-label">PDFs</span>
+              <div className="assignment-detail-pdfs-list">
+                {selectedAssignment.pdfs.map((src, i) => (
+                  <a key={i} href={src} target="_blank" rel="noopener noreferrer" className="assignment-detail-pdf-link">
+                    Open PDF {selectedAssignment.pdfs.length > 1 ? i + 1 : ''}
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+          {selectedAssignment.links?.length > 0 && (
+            <div className="assignment-detail-links">
+              <span className="assignment-detail-media-label">Links</span>
+              <ul className="assignment-detail-links-list">
+                {selectedAssignment.links.map((href, i) => (
+                  <li key={i}>
+                    <a href={href} target="_blank" rel="noopener noreferrer" className="assignment-detail-link">
+                      {href}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+      {enlargedVideo && (
+        <div
+          className="image-enlarge-overlay"
+          onClick={() => setEnlargedVideo(null)}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Video"
+        >
+          <div className="image-enlarge-content assignment-detail-video-modal" onClick={(e) => e.stopPropagation()}>
+            <button type="button" className="image-enlarge-close" onClick={() => setEnlargedVideo(null)} aria-label="Close">×</button>
+            <video src={enlargedVideo} controls autoPlay className="assignment-detail-video-full" />
+          </div>
         </div>
       )}
       {enlargedImage && (

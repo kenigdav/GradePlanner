@@ -29,7 +29,8 @@ export function authMiddleware(req, res, next) {
   if (!user) {
     return res.status(401).json({ error: 'User not found' })
   }
-  req.user = user
+  users.update(user.id, { lastSeenAt: new Date().toISOString() })
+  req.user = users.getById(user.id)
   next()
 }
 
