@@ -58,6 +58,12 @@ export const users = {
     writeJson(USERS_FILE, all)
     return all[i]
   },
+  delete(id) {
+    const all = users.getAll().filter((u) => u.id !== id)
+    if (all.length === users.getAll().length) return false
+    writeJson(USERS_FILE, all)
+    return true
+  },
 }
 
 export const assignments = {

@@ -61,6 +61,16 @@ export function UserManagement({ onClose }) {
     }
   }
 
+  const handleRemoveFromList = async (user) => {
+    if (!window.confirm(`Remove "${user.fullName}" from the Users list? They will no longer appear and cannot log in. This cannot be undone.`)) return
+    try {
+      await usersApi.delete(user.id)
+      await load()
+    } catch (err) {
+      setError(err.message || 'Failed to remove user')
+    }
+  }
+
   const handleAddUser = async (e) => {
     e.preventDefault()
     setError('')
@@ -156,13 +166,24 @@ export function UserManagement({ onClose }) {
                 )}
                 </div>
                 {isAdmin && u.id !== me?.id && (
-                  <button
-                    type="button"
-                    className={`btn btn-sm ${u.banned ? 'btn-unban' : 'btn-ban'}`}
-                    onClick={() => handleBan(u.id, !u.banned)}
-                  >
-                    {u.banned ? 'Unban' : 'Ban'}
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      className={`btn btn-sm ${u.banned ? 'btn-unban' : 'btn-ban'}`}
+                      onClick={() => handleBan(u.id, !u.banned)}
+                      title={u.banned ? 'Allow user to log in again' : 'Ban user (blocks login, stays on list)'}
+                    >
+                      {u.banned ? 'Unban' : 'Ban'}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-remove"
+                      onClick={() => handleRemoveFromList(u)}
+                      title="Remove user from list permanently (cannot log in again)"
+                    >
+                      Remove from list
+                    </button>
+                  </>
                 )}
               </div>
             </div>

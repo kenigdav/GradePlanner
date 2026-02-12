@@ -68,6 +68,15 @@ export const usersApi = {
     })
     return handleRes(res)
   },
+  async delete(userId) {
+    const res = await fetch(`${API_BASE}/users/${userId}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    })
+    if (res.status === 204) return
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error(data.error || res.statusText)
+  },
   async create(fullName, email, username, password, role) {
     const res = await fetch(`${API_BASE}/users`, {
       method: 'POST',

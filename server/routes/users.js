@@ -77,6 +77,19 @@ router.patch('/:id', authMiddleware, requireRole('administrator'), (req, res) =>
   })
 })
 
+router.delete('/:id', authMiddleware, requireRole('administrator'), (req, res) => {
+  const { id } = req.params
+  const target = users.getById(id)
+  if (!target) {
+    return res.status(404).json({ error: 'User not found' })
+  }
+  if (id === req.user.id) {
+    return res.status(400).json({ error: 'You cannot remove yourself from the list' })
+  }
+  users.delete(id)
+  return res.status(204).send()
+})
+
 router.post('/', authMiddleware, requireRole('contributor', 'administrator'), (req, res) => {
   const { fullName, email, username, password, role } = req.body || {}
   if (!fullName || !email || !username || !password) {

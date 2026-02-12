@@ -188,3 +188,13 @@
 .btn-unban:hover {
   filter: brightness(1.1);
 }
+
+.btn-remove {
+  background: transparent;
+  color: var(--danger);
+  border: 1px dashed var(--danger);
+}
+
+.btn-remove:hover {
+  background: rgba(248, 113, 113, 0.15);
+}
