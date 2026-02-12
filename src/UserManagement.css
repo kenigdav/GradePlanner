@@ -193,6 +193,8 @@
   background: transparent;
   color: var(--danger);
   border: 1px dashed var(--danger);
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
 }
 
 .btn-remove:hover {

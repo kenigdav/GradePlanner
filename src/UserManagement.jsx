@@ -181,7 +181,7 @@ export function UserManagement({ onClose }) {
                       onClick={() => handleRemoveFromList(u)}
                       title="Remove user from list permanently (cannot log in again)"
                     >
-                      Remove from list
+                      Remove
                     </button>
                   </>
                 )}
