@@ -11,34 +11,6 @@ import { assignmentsApi, notifyApi } from './api'
 import './App.css'
 
 const THEME_KEY = 'grade-planner-theme'
-const ASSIGNMENTS_CACHE_PREFIX = 'grade-planner-assignments-'
-
-function getAssignmentsCacheKey(userId) {
-  return userId ? `${ASSIGNMENTS_CACHE_PREFIX}${userId}` : null
-}
-
-function loadCachedAssignments(userId) {
-  const key = getAssignmentsCacheKey(userId)
-  if (!key) return []
-  try {
-    const raw = localStorage.getItem(key)
-    if (!raw) return []
-    const data = JSON.parse(raw)
-    return Array.isArray(data) ? data : []
-  } catch {
-    return []
-  }
-}
-
-function saveAssignmentsCache(userId, list) {
-  const key = getAssignmentsCacheKey(userId)
-  if (!key) return
-  try {
-    localStorage.setItem(key, JSON.stringify(list))
-  } catch {
-    // ignore quota or other errors
-  }
-}
 
 function ThemeToggle({ theme, onToggle, className = '' }) {
   const isLight = theme === 'light'
@@ -94,29 +66,20 @@ export default function App() {
 
   const loadAssignments = async () => {
     if (!user) return
-    // Show cached assignments immediately so content isn't blank while loading
-    const cached = loadCachedAssignments(user.id)
-    if (cached.length > 0) setAssignments(cached)
     setAssignmentsLoading(true)
     setAssignmentsError('')
     try {
       const list = await assignmentsApi.list()
       setAssignments(list)
-      saveAssignmentsCache(user.id, list)
     } catch (err) {
       setAssignmentsError(err.message || 'Failed to load assignments')
-      if (cached.length === 0) setAssignments([])
-      // keep cached list on error so user still sees last known data
+      setAssignments([])
     } finally {
       setAssignmentsLoading(false)
     }
   }
 
   useEffect(() => {
-    if (!user) {
-      setAssignments([])
-      return
-    }
     loadAssignments()
   }, [user])
 
@@ -129,29 +92,19 @@ export default function App() {
 
   const addAssignment = async (assignment) => {
     const created = await assignmentsApi.create(assignment)
-    setAssignments((prev) => {
-      const next = [...prev, created]
-      if (user) saveAssignmentsCache(user.id, next)
-      return next
-    })
+    setAssignments((prev) => [...prev, created])
   }
 
   const deleteAssignment = async (id) => {
     await assignmentsApi.delete(id)
-    setAssignments((prev) => {
-      const next = prev.filter((a) => a.id !== id)
-      if (user) saveAssignmentsCache(user.id, next)
-      return next
-    })
+    setAssignments((prev) => prev.filter((a) => a.id !== id))
   }
 
   const updateAssignmentDate = async (id, date) => {
     await assignmentsApi.update(id, { date })
-    setAssignments((prev) => {
-      const next = prev.map((a) => (a.id === id ? { ...a, date } : a))
-      if (user) saveAssignmentsCache(user.id, next)
-      return next
-    })
+    setAssignments((prev) =>
+      prev.map((a) => (a.id === id ? { ...a, date } : a))
+    )
   }
 
   if (loading) {
@@ -202,7 +155,7 @@ export default function App() {
           <div className="header-menu-wrap">
             <button
               type="button"
-              className="btn btn-primary header-menu-btn"
+              className="btn btn-ghost header-menu-btn"
               onClick={() => setShowSideMenu(true)}
               aria-label="Open menu"
               aria-expanded={showSideMenu}
