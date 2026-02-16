@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { assignments as assignmentsStore } from '../data/store.js'
 import { authMiddleware, requireRole, canEditAssignments } from '../middleware/auth.js'
+import * as sse from '../lib/sse.js'
 
 const router = Router()
 
@@ -27,6 +28,7 @@ router.post('/', authMiddleware, requireRole('contributor', 'administrator'), as
       createdByUserId: req.user.id,
       createdByName: req.user.fullName || req.user.username || 'Unknown',
     })
+    sse.broadcast('assignments.changed')
     res.status(201).json(assignment)
   } catch (err) {
     next(err)
@@ -48,6 +50,7 @@ router.patch('/:id', authMiddleware, requireRole('contributor', 'administrator')
       if (updates[k] !== undefined) patch[k] = updates[k]
     }
     const updated = await assignmentsStore.update(id, patch)
+    sse.broadcast('assignments.changed')
     res.json(updated)
   } catch (err) {
     next(err)
@@ -63,6 +66,7 @@ router.delete('/:id', authMiddleware, requireRole('contributor', 'administrator'
       return res.status(404).json({ error: 'Assignment not found' })
     }
     await assignmentsStore.delete(id)
+    sse.broadcast('assignments.changed')
     res.status(204).send()
   } catch (err) {
     next(err)

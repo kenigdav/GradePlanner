@@ -8,6 +8,7 @@ import { UserManagement } from './UserManagement'
 import { SubjectManagement } from './SubjectManagement'
 import { ChangePassword } from './ChangePassword'
 import { assignmentsApi, notifyApi } from './api'
+import { useRealtimeSync } from './useRealtimeSync'
 import './App.css'
 
 const THEME_KEY = 'grade-planner-theme'
@@ -43,6 +44,7 @@ export default function App() {
   const [notifyStatusOk, setNotifyStatusOk] = useState(false)
   const [showSideMenu, setShowSideMenu] = useState(false)
   const [pickedDueDate, setPickedDueDate] = useState(null)
+  const [calendarUpdatedToast, setCalendarUpdatedToast] = useState(false)
 
   const handleNotifyDueTomorrow = async () => {
     setNotifyStatus(null)
@@ -82,6 +84,19 @@ export default function App() {
   useEffect(() => {
     loadAssignments()
   }, [user])
+
+  useRealtimeSync({
+    enabled: !!user,
+    onAssignmentsChanged: () => {
+      setCalendarUpdatedToast(true)
+      loadAssignments()
+      setTimeout(() => setCalendarUpdatedToast(false), 3000)
+    },
+    onReconnect: () => {
+      loadAssignments()
+      window.dispatchEvent(new CustomEvent('grade-planner-subjects-changed'))
+    },
+  })
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
@@ -169,6 +184,11 @@ export default function App() {
           {notifyStatus && (
             <p className={`header-notify-status ${notifyStatusOk ? 'header-notify-status--ok' : 'header-notify-status--err'}`}>
               {notifyStatus}
+            </p>
+          )}
+          {calendarUpdatedToast && (
+            <p className="header-notify-status header-notify-status--ok" role="status">
+              Calendar updated
             </p>
           )}
         </div>
