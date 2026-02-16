@@ -17,12 +17,23 @@ export function AuthProvider({ children }) {
   })
   const [loading, setLoading] = useState(true)
 
+  // Restore user from persistent storage when token exists (handles remounts/state loss)
   useEffect(() => {
     const token = localStorage.getItem(TOKEN_KEY)
     if (!token) {
+      localStorage.removeItem(USER_KEY)
       setUser(null)
       setLoading(false)
       return
+    }
+    try {
+      const stored = localStorage.getItem(USER_KEY)
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        setUser(parsed)
+      }
+    } catch {
+      // ignore corrupt storage
     }
     setLoading(false)
   }, [])
