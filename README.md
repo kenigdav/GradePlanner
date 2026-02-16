@@ -131,7 +131,9 @@ The app runs as a **single process**: the Node server serves the API and the bui
 
 **Notes:** Free services spin down after ~15 minutes of no traffic (first load after that may take ~30–60 seconds). Data (users, assignments) is not persistent on the free tier—it resets on redeploy.
 
-**Persistent disk on Render:** If you add a persistent disk and mount it (e.g. at `/data`), set the env var **`DATA_DIR`** to that path (e.g. `DATA_DIR=/data`). The app will store `users.json`, `assignments.json`, and `subjects.json` there, so data will survive redeploys.
+**Persistent data:** To keep users and assignments across redeploys you can either:
+- **External database (recommended):** Set **`DATABASE_URL`** to a PostgreSQL connection string (e.g. from [Neon](https://neon.tech), [Supabase](https://supabase.com), or Render’s Postgres). The app will store all data on that server.
+- **Persistent disk:** If you add a persistent disk and mount it (e.g. at `/data`), set **`DATA_DIR`** to that path (e.g. `DATA_DIR=/data`). The app will store `users.json`, `assignments.json`, and `subjects.json` there.
 
 ### Option 1: Docker (any cloud or VPS)
 
@@ -170,7 +172,8 @@ The app runs as a **single process**: the Node server serves the API and the bui
 | `PORT`        | No       | Port to listen on (default `3001`). Many hosts set this automatically. |
 | `JWT_SECRET`  | Yes      | Secret used to sign JWTs. Use a long random string. |
 | `NODE_ENV`    | Yes for single-server | Set to `production` so the server serves the built frontend. |
-| `DATA_DIR`    | No       | Path to a persistent directory for users/assignments/subjects (e.g. Render disk mount). If not set, data is in `server/data/files/` (ephemeral on most hosts). |
+| `DATABASE_URL`| No       | **Recommended for production.** PostgreSQL connection URL (e.g. from [Neon](https://neon.tech), [Supabase](https://supabase.com), or [Render Postgres](https://render.com/docs/databases)). When set, all data (users, assignments, subjects) is stored on the external database so it survives redeploys. |
+| `DATA_DIR`    | No       | Path to a persistent directory for JSON files. **Only used when `DATABASE_URL` is not set.** If neither is set, data is in `server/data/files/` (ephemeral on most hosts). |
 | **Email (for “Email due tomorrow”)** | | |
 | `SMTP_HOST`   | For email | SMTP server host (e.g. `smtp.gmail.com`). |
 | `SMTP_PORT`   | No       | SMTP port (default `587`). Use `465` for SSL. |

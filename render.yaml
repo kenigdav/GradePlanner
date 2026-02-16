@@ -1,0 +1,22 @@
+# Render Blueprint: connect this repo at https://dashboard.render.com/blueprints
+# to deploy Grade Planner with one click.
+
+services:
+  - type: web
+    name: grade-planner
+    runtime: node
+    plan: free
+
+    buildCommand: "npm install --include=dev && npm run build && cd server && npm install --omit=dev"
+    startCommand: npm start
+
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      # Optional: add DATABASE_URL (PostgreSQL) for persistent data across redeploys.
+      # - key: DATABASE_URL
+      #   sync: false
+
+    healthCheckPath: /api/health

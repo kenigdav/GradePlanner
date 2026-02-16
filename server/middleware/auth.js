@@ -16,22 +16,25 @@ export function verifyToken(token) {
 }
 
 export function authMiddleware(req, res, next) {
-  const auth = req.headers.authorization
-  const token = auth?.startsWith('Bearer ') ? auth.slice(7) : null
-  if (!token) {
-    return res.status(401).json({ error: 'Authentication required' })
+  const run = async () => {
+    const auth = req.headers.authorization
+    const token = auth?.startsWith('Bearer ') ? auth.slice(7) : null
+    if (!token) {
+      return res.status(401).json({ error: 'Authentication required' })
+    }
+    const decoded = verifyToken(token)
+    if (!decoded?.userId) {
+      return res.status(401).json({ error: 'Invalid or expired token' })
+    }
+    const user = await users.getById(decoded.userId)
+    if (!user) {
+      return res.status(401).json({ error: 'User not found' })
+    }
+    await users.update(user.id, { lastSeenAt: new Date().toISOString() })
+    req.user = await users.getById(user.id)
+    next()
   }
-  const decoded = verifyToken(token)
-  if (!decoded?.userId) {
-    return res.status(401).json({ error: 'Invalid or expired token' })
-  }
-  const user = users.getById(decoded.userId)
-  if (!user) {
-    return res.status(401).json({ error: 'User not found' })
-  }
-  users.update(user.id, { lastSeenAt: new Date().toISOString() })
-  req.user = users.getById(user.id)
-  next()
+  run().catch(next)
 }
 
 export function requireRole(...roles) {

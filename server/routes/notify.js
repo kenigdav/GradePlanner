@@ -19,10 +19,10 @@ router.post('/due-tomorrow', authMiddleware, requireRole('administrator'), async
   }
 
   const tomorrow = getTomorrowDateString()
-  const dueAssignments = assignmentsStore.getAll().filter((a) => a.date === tomorrow)
-  const recipients = usersStore
-    .getAll()
-    .filter((u) => u.email && String(u.email).trim() && !u.banned && u.role !== 'pending')
+  const allAssignments = await assignmentsStore.getAll()
+  const dueAssignments = allAssignments.filter((a) => a.date === tomorrow)
+  const allUsers = await usersStore.getAll()
+  const recipients = allUsers.filter((u) => u.email && String(u.email).trim() && !u.banned && u.role !== 'pending')
 
   const subject = `Assignments due tomorrow (${tomorrow}) – Assignment Planner`
   const assignmentList =
