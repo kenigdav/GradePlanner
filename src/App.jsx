@@ -106,20 +106,18 @@ export default function App() {
   const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))
 
   const addAssignment = async (assignment) => {
-    const created = await assignmentsApi.create(assignment)
-    setAssignments((prev) => [...prev, created])
+    await assignmentsApi.create(assignment)
+    await loadAssignments()
   }
 
   const deleteAssignment = async (id) => {
     await assignmentsApi.delete(id)
-    setAssignments((prev) => prev.filter((a) => a.id !== id))
+    await loadAssignments()
   }
 
   const updateAssignmentDate = async (id, date) => {
     await assignmentsApi.update(id, { date })
-    setAssignments((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, date } : a))
-    )
+    await loadAssignments()
   }
 
   if (loading) {
