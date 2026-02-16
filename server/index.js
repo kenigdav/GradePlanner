@@ -2,7 +2,7 @@ import express from 'express'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import cors from 'cors'
-import { seedDefaultAdmin, seedDefaultSubjects } from './data/seed.js'
+import { seedDefaultAdmin, seedDefaultContributor, seedDefaultSubjects } from './data/seed.js'
 import authRoutes from './routes/auth.js'
 import subjectRoutes from './routes/subjects.js'
 import userRoutes from './routes/users.js'
@@ -15,6 +15,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 async function run() {
   try {
     await seedDefaultAdmin()
+    await seedDefaultContributor()
     await seedDefaultSubjects()
   } catch (err) {
     console.error('Failed to seed:', err)
