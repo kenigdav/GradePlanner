@@ -27,7 +27,9 @@ function readJson(filePath, defaultVal = []) {
 
 function writeJson(filePath, data) {
   ensureDir()
-  fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8')
+  const tmpPath = `${filePath}.tmp`
+  fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2), 'utf8')
+  fs.renameSync(tmpPath, filePath)
 }
 
 export const users = {

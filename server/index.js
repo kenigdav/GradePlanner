@@ -48,4 +48,7 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 3001
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`)
+  if (process.env.NODE_ENV === 'production' && !process.env.DATA_DIR) {
+    console.warn('DATA_DIR is not set. Data is stored in server/data/files and may be erased on redeploy. Set DATA_DIR to a persistent volume path (e.g. /data) to keep data.')
+  }
 })
