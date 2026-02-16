@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from './AuthContext'
 import { AssignmentForm } from './AssignmentForm'
 import { CalendarView } from './CalendarView'
@@ -45,6 +45,7 @@ export default function App() {
   const [showSideMenu, setShowSideMenu] = useState(false)
   const [pickedDueDate, setPickedDueDate] = useState(null)
   const [calendarUpdatedToast, setCalendarUpdatedToast] = useState(false)
+  const assignmentsLoadedOnceRef = useRef(false)
 
   const handleNotifyDueTomorrow = async () => {
     setNotifyStatus(null)
@@ -68,11 +69,13 @@ export default function App() {
 
   const loadAssignments = async () => {
     if (!user) return
-    setAssignmentsLoading(true)
+    const isInitialLoad = !assignmentsLoadedOnceRef.current
+    if (isInitialLoad) setAssignmentsLoading(true)
     setAssignmentsError('')
     try {
       const list = await assignmentsApi.list()
       setAssignments(list)
+      assignmentsLoadedOnceRef.current = true
     } catch (err) {
       setAssignmentsError(err.message || 'Failed to load assignments')
       setAssignments([])
@@ -80,6 +83,10 @@ export default function App() {
       setAssignmentsLoading(false)
     }
   }
+
+  useEffect(() => {
+    if (!user) assignmentsLoadedOnceRef.current = false
+  }, [user])
 
   useEffect(() => {
     loadAssignments()
