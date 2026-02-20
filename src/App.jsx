@@ -37,7 +37,6 @@ const ROLE_DESCRIPTIONS = {
       'Manage subjects (add, rename, delete)',
       'Manage all users and change roles',
       'Send "due tomorrow" email notifications',
-      'Change own password',
     ],
   },
   contributor: {
@@ -46,7 +45,6 @@ const ROLE_DESCRIPTIONS = {
       'Add, edit, and delete assignments',
       'Drag assignments to reschedule',
       'Approve pending viewers',
-      'Change own password',
     ],
   },
   viewer: {
@@ -54,7 +52,6 @@ const ROLE_DESCRIPTIONS = {
     abilities: [
       'View the calendar and all assignments',
       'View other users',
-      'Change own password',
     ],
   },
   pending: {
