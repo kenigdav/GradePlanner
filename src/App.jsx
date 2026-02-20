@@ -28,6 +28,60 @@ function ThemeToggle({ theme, onToggle, className = '' }) {
   )
 }
 
+const ROLE_DESCRIPTIONS = {
+  administrator: {
+    label: 'Administrator',
+    abilities: [
+      'Add, edit, and delete assignments',
+      'Drag assignments to reschedule',
+      'Manage subjects (add, rename, delete)',
+      'Manage all users and change roles',
+      'Send "due tomorrow" email notifications',
+      'Change own password',
+    ],
+  },
+  contributor: {
+    label: 'Contributor',
+    abilities: [
+      'Add, edit, and delete assignments',
+      'Drag assignments to reschedule',
+      'Approve pending viewers',
+      'Change own password',
+    ],
+  },
+  viewer: {
+    label: 'Viewer',
+    abilities: [
+      'View the calendar and all assignments',
+      'View other users',
+      'Change own password',
+    ],
+  },
+  pending: {
+    label: 'Pending',
+    abilities: [
+      'Waiting for a contributor or administrator to approve access',
+    ],
+  },
+}
+
+function RoleInfoPanel({ role, onClose }) {
+  const info = ROLE_DESCRIPTIONS[role] || { label: role, abilities: [] }
+  return (
+    <div className="role-info-panel">
+      <div className="role-info-header">
+        <h2 className="role-info-title">{info.label}</h2>
+        <button type="button" className="btn btn-ghost" onClick={onClose} aria-label="Close">×</button>
+      </div>
+      <ul className="role-info-list">
+        {info.abilities.map((a, i) => (
+          <li key={i}>{a}</li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
 export default function App() {
   const { user, loading, logout, canEdit, canManageUsers } = useAuth()
   const [authScreen, setAuthScreen] = useState('login')
@@ -43,6 +97,7 @@ export default function App() {
   const [notifyStatus, setNotifyStatus] = useState(null)
   const [notifyStatusOk, setNotifyStatusOk] = useState(false)
   const [showSideMenu, setShowSideMenu] = useState(false)
+  const [showRoleInfo, setShowRoleInfo] = useState(false)
   const [pickedDueDate, setPickedDueDate] = useState(null)
   const [calendarUpdatedToast, setCalendarUpdatedToast] = useState(false)
   const assignmentsLoadedOnceRef = useRef(false)
@@ -184,7 +239,9 @@ export default function App() {
             </button>
           </div>
           <div className="header-actions">
-            <span className="header-user">{user.fullName} ({user.role})</span>
+            <button type="button" className="header-user header-user--btn" onClick={() => setShowRoleInfo(true)}>
+              {user.fullName} ({user.role})
+            </button>
           </div>
           {notifyStatus && (
             <p className={`header-notify-status ${notifyStatusOk ? 'header-notify-status--ok' : 'header-notify-status--err'}`}>
@@ -295,6 +352,13 @@ export default function App() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+      {showRoleInfo && (
+        <div className="modal-backdrop" onClick={() => setShowRoleInfo(false)}>
+          <div className="modal-content modal-content--fit" onClick={(e) => e.stopPropagation()}>
+            <RoleInfoPanel role={user.role} onClose={() => setShowRoleInfo(false)} />
           </div>
         </div>
       )}
