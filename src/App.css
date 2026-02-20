@@ -139,7 +139,7 @@
   width: auto;
   justify-content: center;
   font-weight: 600;
-  background: var(--danger);
+  background: #dc2626;
   color: white;
   border-radius: var(--radius-sm);
 }
