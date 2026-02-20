@@ -53,8 +53,9 @@
 
 .assignment-form label .assignment-form-required {
   color: var(--danger, #ef4444);
-  margin-left: 0.15rem;
-  font-weight: 700;
+  margin-left: 0.25rem;
+  font-size: 0.6rem;
+  vertical-align: middle;
 }
 
 .assignment-form-links {
