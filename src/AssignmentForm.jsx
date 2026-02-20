@@ -320,7 +320,7 @@ export function AssignmentForm({ onSubmit, suggestedDueDate }) {
           </div>
         )}
       </div>
-      <button type="submit" className="btn btn-primary">
+      <button type="submit" className="btn btn-primary" disabled={!subject.trim() || !description.trim()}>
         Add assignment
       </button>
     </form>
