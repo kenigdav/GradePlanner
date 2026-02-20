@@ -135,14 +135,18 @@
 }
 
 .side-menu-item--signout {
-  margin-top: auto;
-  font-weight: 500;
-  color: var(--danger);
+  margin: auto 0.75rem 0.75rem;
+  width: auto;
+  justify-content: center;
+  font-weight: 600;
+  background: var(--danger);
+  color: white;
+  border-radius: var(--radius-sm);
 }
 
 .side-menu-item--signout:hover {
-  background: rgba(248, 113, 113, 0.1);
-  color: var(--danger);
+  background: #b91c1c;
+  color: white;
 }
 
 .header-user {
