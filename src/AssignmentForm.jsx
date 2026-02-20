@@ -185,7 +185,7 @@ export function AssignmentForm({ onSubmit, suggestedDueDate }) {
   return (
     <form className="assignment-form" onSubmit={handleSubmit}>
       <label className="assignment-form-date-label">
-        <span>Due date</span>
+        <span>Due date<span className="assignment-form-required">*</span></span>
         <div className="assignment-form-date-wrap" ref={datePickerRef}>
           <input type="hidden" name="date" value={date} required />
           <button
@@ -237,7 +237,7 @@ export function AssignmentForm({ onSubmit, suggestedDueDate }) {
         </div>
       </label>
       <label>
-        <span>Subject</span>
+        <span>Subject<span className="assignment-form-required">*</span></span>
         <select
           value={subject}
           onChange={(e) => setSubject(e.target.value)}
@@ -250,7 +250,7 @@ export function AssignmentForm({ onSubmit, suggestedDueDate }) {
         </select>
       </label>
       <label>
-        <span>Description</span>
+        <span>Description<span className="assignment-form-required">*</span></span>
         <textarea
           placeholder="Assignment title or details..."
           value={description}
@@ -260,7 +260,7 @@ export function AssignmentForm({ onSubmit, suggestedDueDate }) {
         />
       </label>
       <label>
-        <span>Link(s) <span className="assignment-form-optional">optional</span></span>
+        <span>Link(s)</span>
         <textarea
           placeholder="One link per line"
           value={linksText}

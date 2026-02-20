@@ -51,10 +51,10 @@
   min-height: 4rem;
 }
 
-.assignment-form-optional {
-  font-weight: 400;
-  color: var(--text-muted);
-  font-size: 0.75rem;
+.assignment-form label .assignment-form-required {
+  color: var(--danger, #ef4444);
+  margin-left: 0.15rem;
+  font-weight: 700;
 }
 
 .assignment-form-links {
