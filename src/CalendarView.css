@@ -264,9 +264,8 @@
   white-space: nowrap;
 }
 
-.calendar-assignment--selected {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
+.calendar-assignment--selected .calendar-assignment-subject {
+  text-decoration: underline;
 }
 
 .calendar-assignment-desc {
