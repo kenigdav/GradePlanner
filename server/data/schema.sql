@@ -24,8 +24,10 @@ CREATE TABLE IF NOT EXISTS assignments (
   pdfs JSONB NOT NULL DEFAULT '[]',
   links JSONB NOT NULL DEFAULT '[]',
   created_by_user_id UUID NOT NULL,
-  created_by_name TEXT NOT NULL
+  created_by_name TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+ALTER TABLE assignments ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
 
 CREATE TABLE IF NOT EXISTS subjects (
   name TEXT PRIMARY KEY

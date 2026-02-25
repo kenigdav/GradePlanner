@@ -74,7 +74,7 @@ export const assignments = {
   },
   create(assignment) {
     const all = assignments.getAll()
-    const newOne = { ...assignment, id: randomUUID() }
+    const newOne = { ...assignment, id: randomUUID(), createdAt: new Date().toISOString() }
     all.push(newOne)
     writeJson(ASSIGNMENTS_FILE, all)
     return newOne

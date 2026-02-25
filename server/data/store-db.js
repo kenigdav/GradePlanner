@@ -58,6 +58,7 @@ function rowToAssignment(row) {
     links: row.links || [],
     createdByUserId: row.created_by_user_id,
     createdByName: row.created_by_name,
+    createdAt: row.created_at ? new Date(row.created_at).toISOString() : null,
   }
 }
 
@@ -135,8 +136,8 @@ export const assignments = {
     await ensureSchema()
     const id = randomUUID()
     await getPool().query(
-      `INSERT INTO assignments (id, date, subject, description, images, videos, pdfs, links, created_by_user_id, created_by_name)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+      `INSERT INTO assignments (id, date, subject, description, images, videos, pdfs, links, created_by_user_id, created_by_name, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, COALESCE($11::timestamptz, NOW()))`,
       [
         id,
         assignment.date,
@@ -148,6 +149,7 @@ export const assignments = {
         JSON.stringify(assignment.links || []),
         assignment.createdByUserId,
         assignment.createdByName,
+        assignment.createdAt || null,
       ]
     )
     return this.getById(id)

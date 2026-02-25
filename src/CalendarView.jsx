@@ -12,14 +12,39 @@ function formatFullDate(dateStr) {
   return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
 }
 
+function formatPostedAt(isoString) {
+  if (!isoString) return null
+  const d = new Date(isoString)
+  return d.toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
+}
+
+const CELLS_PER_WEEK = 7
+
 function getDaysInMonth(year, month) {
   const first = new Date(year, month, 1)
   const last = new Date(year, month + 1, 0)
   const startPad = first.getDay()
   const daysInMonth = last.getDate()
-  const pad = Array(startPad).fill(null)
-  const days = Array.from({ length: daysInMonth }, (_, i) => i + 1)
-  return [...pad, ...days]
+  const prevMonth = month === 0 ? 11 : month - 1
+  const prevYear = month === 0 ? year - 1 : year
+  const prevLast = new Date(prevYear, prevMonth + 1, 0)
+  const prevDaysInMonth = prevLast.getDate()
+  const cells = []
+  for (let i = 0; i < startPad; i++) {
+    const day = prevDaysInMonth - startPad + 1 + i
+    cells.push({ type: 'prev', day, year: prevYear, month: prevMonth })
+  }
+  for (let day = 1; day <= daysInMonth; day++) {
+    cells.push({ type: 'curr', day, year, month })
+  }
+  const filled = startPad + daysInMonth
+  const endPad = filled % CELLS_PER_WEEK === 0 ? 0 : CELLS_PER_WEEK - (filled % CELLS_PER_WEEK)
+  const nextMonth = month === 11 ? 0 : month + 1
+  const nextYear = month === 11 ? year + 1 : year
+  for (let i = 0; i < endPad; i++) {
+    cells.push({ type: 'next', day: i + 1, year: nextYear, month: nextMonth })
+  }
+  return cells
 }
 
 function dateKey(year, month, day) {
@@ -149,7 +174,7 @@ export function CalendarView({ assignments, onDelete, onUpdateDate, onDateClick,
         <h3 className="calendar-title">
           {formatMonthYear(viewDate)}
         </h3>
-        <button type="button" className="btn btn-ghost btn-today" onClick={goToday}>
+        <button type="button" className="btn btn-primary btn-today" onClick={goToday}>
           Today
         </button>
       </div>
@@ -171,21 +196,19 @@ export function CalendarView({ assignments, onDelete, onUpdateDate, onDateClick,
             {day}
           </div>
         ))}
-        {cells.map((day, i) => {
-          if (day === null) {
-            return <div key={`empty-${i}`} className="calendar-day calendar-day--empty" />
-          }
-          const key = dateKey(year, month, day)
+        {cells.map((cell, i) => {
+          const key = dateKey(cell.year, cell.month, cell.day)
           const dayAssignments = byDate[key] || []
           const isToday =
-            viewDate.getFullYear() === new Date().getFullYear() &&
-            viewDate.getMonth() === new Date().getMonth() &&
-            day === new Date().getDate()
+            cell.year === new Date().getFullYear() &&
+            cell.month === new Date().getMonth() &&
+            cell.day === new Date().getDate()
+          const isOtherMonth = cell.type === 'prev' || cell.type === 'next'
 
           return (
             <div
               key={key}
-              className={`calendar-day calendar-day--clickable ${isToday ? 'calendar-day--today' : ''} ${canEdit && dragOverDateKey === key ? 'calendar-day--drop-target' : ''}`}
+              className={`calendar-day calendar-day--clickable ${isOtherMonth ? 'calendar-day--other-month' : ''} ${isToday ? 'calendar-day--today' : ''} ${canEdit && dragOverDateKey === key ? 'calendar-day--drop-target' : ''}`}
               role="gridcell"
               onClick={() => {
                 setSelectedDate(key)
@@ -195,7 +218,7 @@ export function CalendarView({ assignments, onDelete, onUpdateDate, onDateClick,
               onDragLeave={canEdit ? handleDragLeave : undefined}
               onDrop={canEdit ? (e) => handleDrop(e, key) : undefined}
             >
-              <span className="calendar-day-num">{day}</span>
+              <span className="calendar-day-num">{cell.day}</span>
               <div className="calendar-day-assignments">
                 {dayAssignments.map((a) => (
                   <div
@@ -263,7 +286,13 @@ export function CalendarView({ assignments, onDelete, onUpdateDate, onDateClick,
                 >
                   <div>
                     <span className="day-view-assignment-subject">{a.subject}</span>
-                    {a.createdByName && <span className="day-view-assignment-author">Posted by {a.createdByName}</span>}
+                    {(a.createdByName || a.createdAt) && (
+                      <span className="day-view-assignment-author">
+                        {a.createdByName && <>Posted by {a.createdByName}</>}
+                        {a.createdByName && a.createdAt && ' on '}
+                        {a.createdAt && formatPostedAt(a.createdAt)}
+                      </span>
+                    )}
                     {a.description && <p className="day-view-assignment-desc">{a.description}</p>}
                     {((a.images?.length || 0) + (a.videos?.length || 0) + (a.pdfs?.length || 0)) > 0 && (
                       <div className="day-view-assignment-media">
@@ -327,8 +356,12 @@ export function CalendarView({ assignments, onDelete, onUpdateDate, onDateClick,
           <div className="assignment-detail-header">
             <span className="assignment-detail-subject">{selectedAssignment.subject}</span>
             <span className="assignment-detail-date">{formatFullDate(selectedAssignment.date)}</span>
-            {selectedAssignment.createdByName && (
-              <span className="assignment-detail-author">Posted by {selectedAssignment.createdByName}</span>
+            {(selectedAssignment.createdByName || selectedAssignment.createdAt) && (
+              <span className="assignment-detail-author">
+                {selectedAssignment.createdByName && <>Posted by {selectedAssignment.createdByName}</>}
+                {selectedAssignment.createdByName && selectedAssignment.createdAt && ' on '}
+                {selectedAssignment.createdAt && formatPostedAt(selectedAssignment.createdAt)}
+              </span>
             )}
             <button
               type="button"
