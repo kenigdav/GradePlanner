@@ -285,7 +285,13 @@ export function CalendarView({ assignments, onDelete, onUpdateDate, onDateClick,
                   onDragEnd={canEdit ? handleDragEnd : undefined}
                 >
                   <div>
-                    <span className="day-view-assignment-subject">{a.subject}</span>
+                    <button
+                      type="button"
+                      className="day-view-assignment-subject day-view-assignment-subject--btn"
+                      onClick={(e) => { e.stopPropagation(); setSelectedAssignmentId((id) => (id === a.id ? null : a.id)) }}
+                    >
+                      {a.subject}
+                    </button>
                     {(a.createdByName || a.createdAt) && (
                       <span className="day-view-assignment-author">
                         {a.createdByName && <>Posted by {a.createdByName}</>}

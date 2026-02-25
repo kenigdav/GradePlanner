@@ -60,6 +60,19 @@
   color: var(--accent);
 }
 
+.day-view-assignment-subject--btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.day-view-assignment-subject--btn:hover {
+  text-decoration: underline;
+}
+
 .day-view-assignment-author {
   display: block;
   font-size: 0.75rem;
