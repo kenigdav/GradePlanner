@@ -15,6 +15,25 @@
   position: relative;
 }
 
+.header-personalize-wrap {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.header-personalize-btn {
+  font-size: 0.9rem;
+  padding: 0.5rem 0.85rem;
+  background: #7c3aed;
+  color: #fff;
+  border-color: #7c3aed;
+}
+
+.header-personalize-btn:hover {
+  background: #6d28d9;
+  border-color: #6d28d9;
+}
+
 .header-menu-wrap {
   position: absolute;
   top: 0;
@@ -197,6 +216,64 @@
   font-size: 0.9rem;
   color: var(--text-muted);
   line-height: 1.5;
+}
+
+.subject-personalize {
+  padding: 1.25rem;
+}
+
+.subject-personalize-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.6rem;
+}
+
+.subject-personalize-header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.subject-personalize-hint {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.subject-personalize-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.8rem;
+}
+
+.subject-personalize-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  max-height: min(45vh, 320px);
+  overflow: auto;
+}
+
+.subject-personalize-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+}
+
+.subject-personalize-row input {
+  margin: 0;
+}
+
+.subject-personalize-empty {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
 }
 
 .header-actions .btn-ghost {

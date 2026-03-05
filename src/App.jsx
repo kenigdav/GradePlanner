@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useAuth } from './AuthContext'
 import { AssignmentForm } from './AssignmentForm'
 import { CalendarView } from './CalendarView'
@@ -7,11 +7,12 @@ import { Register } from './Register'
 import { UserManagement } from './UserManagement'
 import { SubjectManagement } from './SubjectManagement'
 import { ChangePassword } from './ChangePassword'
-import { assignmentsApi, notifyApi } from './api'
+import { assignmentsApi, notifyApi, subjectsApi } from './api'
 import { useRealtimeSync } from './useRealtimeSync'
 import './App.css'
 
 const THEME_KEY = 'grade-planner-theme'
+const SUBJECTS_CHANGED_EVENT = 'grade-planner-subjects-changed'
 
 function ThemeToggle({ theme, onToggle, className = '' }) {
   const isLight = theme === 'light'
@@ -79,6 +80,45 @@ function RoleInfoPanel({ role, onClose }) {
   )
 }
 
+function SubjectPersonalizePanel({
+  subjects,
+  selectedSubjects,
+  onToggleSubject,
+  onSelectAll,
+  onClearAll,
+  onClose,
+}) {
+  return (
+    <div className="subject-personalize">
+      <div className="subject-personalize-header">
+        <h2>Personalize subjects</h2>
+        <button type="button" className="btn btn-ghost" onClick={onClose} aria-label="Close">×</button>
+      </div>
+      <p className="subject-personalize-hint">Choose which subjects appear on your calendar. By default, all subjects are selected.</p>
+      <div className="subject-personalize-actions">
+        <button type="button" className="btn btn-ghost btn-sm" onClick={onSelectAll}>Select all</button>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={onClearAll}>Clear all</button>
+      </div>
+      <div className="subject-personalize-list">
+        {subjects.length === 0 ? (
+          <p className="subject-personalize-empty">No subjects available yet.</p>
+        ) : (
+          subjects.map((subject) => (
+            <label key={subject} className="subject-personalize-row">
+              <input
+                type="checkbox"
+                checked={selectedSubjects.includes(subject)}
+                onChange={() => onToggleSubject(subject)}
+              />
+              <span>{subject}</span>
+            </label>
+          ))
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function App() {
   const { user, loading, logout, canEdit, canManageUsers } = useAuth()
   const [authScreen, setAuthScreen] = useState('login')
@@ -97,7 +137,11 @@ export default function App() {
   const [showRoleInfo, setShowRoleInfo] = useState(false)
   const [pickedDueDate, setPickedDueDate] = useState(null)
   const [calendarUpdatedToast, setCalendarUpdatedToast] = useState(false)
+  const [showSubjectPersonalize, setShowSubjectPersonalize] = useState(false)
+  const [subjects, setSubjects] = useState([])
+  const [selectedSubjects, setSelectedSubjects] = useState([])
   const assignmentsLoadedOnceRef = useRef(false)
+  const subjectsInitializedRef = useRef(false)
 
   const handleNotifyDueTomorrow = async () => {
     setNotifyStatus(null)
@@ -136,12 +180,33 @@ export default function App() {
     }
   }
 
+  const loadSubjects = async () => {
+    if (!user) return
+    try {
+      const list = await subjectsApi.list()
+      setSubjects(Array.isArray(list) ? list : [])
+    } catch {
+      // Keep subject filtering functional from assignment data even if subjects API fails.
+      setSubjects([])
+    }
+  }
+
   useEffect(() => {
     if (!user) assignmentsLoadedOnceRef.current = false
   }, [user])
 
   useEffect(() => {
     loadAssignments()
+  }, [user])
+
+  useEffect(() => {
+    loadSubjects()
+  }, [user])
+
+  useEffect(() => {
+    const onSubjectsChanged = () => loadSubjects()
+    window.addEventListener(SUBJECTS_CHANGED_EVENT, onSubjectsChanged)
+    return () => window.removeEventListener(SUBJECTS_CHANGED_EVENT, onSubjectsChanged)
   }, [user])
 
   useRealtimeSync({
@@ -162,6 +227,33 @@ export default function App() {
     localStorage.setItem(THEME_KEY, theme)
   }, [theme])
 
+  const availableSubjects = useMemo(() => {
+    const set = new Set(subjects)
+    assignments.forEach((a) => {
+      if (a.subject) set.add(a.subject)
+    })
+    return Array.from(set).sort((a, b) => a.localeCompare(b))
+  }, [subjects, assignments])
+
+  useEffect(() => {
+    setSelectedSubjects((prev) => {
+      if (!subjectsInitializedRef.current) {
+        subjectsInitializedRef.current = true
+        return availableSubjects
+      }
+      const prevSet = new Set(prev)
+      const retained = availableSubjects.filter((subject) => prevSet.has(subject))
+      const added = availableSubjects.filter((subject) => !prevSet.has(subject))
+      return [...retained, ...added]
+    })
+  }, [availableSubjects])
+
+  const filteredAssignments = useMemo(() => {
+    if (selectedSubjects.length === 0) return []
+    const selected = new Set(selectedSubjects)
+    return assignments.filter((assignment) => selected.has(assignment.subject))
+  }, [assignments, selectedSubjects])
+
   const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))
 
   const addAssignment = async (assignment) => {
@@ -177,6 +269,12 @@ export default function App() {
   const updateAssignmentDate = async (id, date) => {
     await assignmentsApi.update(id, { date })
     await loadAssignments()
+  }
+
+  const handleToggleSubject = (subject) => {
+    setSelectedSubjects((prev) => (
+      prev.includes(subject) ? prev.filter((s) => s !== subject) : [...prev, subject]
+    ))
   }
 
   if (loading) {
@@ -222,6 +320,15 @@ export default function App() {
     <div className="app">
       <header className="header">
         <div className="header-inner">
+          <div className="header-personalize-wrap">
+            <button
+              type="button"
+              className="btn btn-primary header-personalize-btn"
+              onClick={() => setShowSubjectPersonalize(true)}
+            >
+              Personalize subjects
+            </button>
+          </div>
           <h1>Assignment Planner</h1>
           <p className="tagline">Track due dates by subject</p>
           <div className="header-menu-wrap">
@@ -304,7 +411,7 @@ export default function App() {
             <p className="assignments-loading">Loading calendar...</p>
           ) : (
             <CalendarView
-              assignments={assignments}
+              assignments={filteredAssignments}
               onDelete={canEdit ? deleteAssignment : undefined}
               onUpdateDate={canEdit ? updateAssignmentDate : undefined}
               onDateClick={setPickedDueDate}
@@ -356,6 +463,20 @@ export default function App() {
         <div className="modal-backdrop" onClick={() => setShowRoleInfo(false)}>
           <div className="modal-content modal-content--fit" onClick={(e) => e.stopPropagation()}>
             <RoleInfoPanel role={user.role} onClose={() => setShowRoleInfo(false)} />
+          </div>
+        </div>
+      )}
+      {showSubjectPersonalize && (
+        <div className="modal-backdrop" onClick={() => setShowSubjectPersonalize(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <SubjectPersonalizePanel
+              subjects={availableSubjects}
+              selectedSubjects={selectedSubjects}
+              onToggleSubject={handleToggleSubject}
+              onSelectAll={() => setSelectedSubjects(availableSubjects)}
+              onClearAll={() => setSelectedSubjects([])}
+              onClose={() => setShowSubjectPersonalize(false)}
+            />
           </div>
         </div>
       )}
