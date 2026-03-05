@@ -142,6 +142,11 @@ export default function App() {
   const [selectedSubjects, setSelectedSubjects] = useState([])
   const assignmentsLoadedOnceRef = useRef(false)
   const subjectsInitializedRef = useRef(false)
+  const subjectFilterStorageKey = user?.id
+    ? `grade-planner-subject-filter:${user.id}`
+    : user?.username
+      ? `grade-planner-subject-filter:${user.username}`
+      : null
 
   const handleNotifyDueTomorrow = async () => {
     setNotifyStatus(null)
@@ -227,6 +232,10 @@ export default function App() {
     localStorage.setItem(THEME_KEY, theme)
   }, [theme])
 
+  useEffect(() => {
+    subjectsInitializedRef.current = false
+  }, [subjectFilterStorageKey])
+
   const availableSubjects = useMemo(() => {
     const set = new Set(subjects)
     assignments.forEach((a) => {
@@ -239,6 +248,19 @@ export default function App() {
     setSelectedSubjects((prev) => {
       if (!subjectsInitializedRef.current) {
         subjectsInitializedRef.current = true
+        if (subjectFilterStorageKey) {
+          try {
+            const raw = localStorage.getItem(subjectFilterStorageKey)
+            if (raw) {
+              const saved = JSON.parse(raw)
+              if (Array.isArray(saved)) {
+                return availableSubjects.filter((subject) => saved.includes(subject))
+              }
+            }
+          } catch {
+            // Fall back to default selection when storage is malformed.
+          }
+        }
         return availableSubjects
       }
       const prevSet = new Set(prev)
@@ -246,7 +268,12 @@ export default function App() {
       const added = availableSubjects.filter((subject) => !prevSet.has(subject))
       return [...retained, ...added]
     })
-  }, [availableSubjects])
+  }, [availableSubjects, subjectFilterStorageKey])
+
+  useEffect(() => {
+    if (!subjectFilterStorageKey || !subjectsInitializedRef.current) return
+    localStorage.setItem(subjectFilterStorageKey, JSON.stringify(selectedSubjects))
+  }, [selectedSubjects, subjectFilterStorageKey])
 
   const filteredAssignments = useMemo(() => {
     if (selectedSubjects.length === 0) return []
