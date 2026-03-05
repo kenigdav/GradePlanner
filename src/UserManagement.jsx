@@ -127,7 +127,10 @@ export function UserManagement({ onClose }) {
       ) : (
         <div className="user-management-list">
           {users.map((u) => (
-            <div key={u.id} className={`user-management-row ${u.banned ? 'user-management-row--banned' : ''}`}>
+            <div
+              key={u.id}
+              className={`user-management-row ${u.role === 'pending' ? 'user-management-row--pending' : ''} ${u.banned ? 'user-management-row--banned' : ''}`}
+            >
               <div className="user-management-info">
                 <span className="user-management-name">
                   <span

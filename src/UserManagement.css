@@ -88,8 +88,13 @@
   border: 1px solid var(--border);
 }
 
+.user-management-row--pending {
+  background: rgba(124, 110, 246, 0.08);
+  border-color: rgba(124, 110, 246, 0.35);
+}
+
 .user-management-row--banned {
-  opacity: 0.85;
+  background: rgba(248, 113, 113, 0.08);
   border-color: var(--danger);
 }
 
