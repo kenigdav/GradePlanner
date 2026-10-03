@@ -21,7 +21,7 @@ export function clearInviteFromUrl() {
 
 export function InviteAccept({ onNeedAuth }) {
   const { user, updateUser } = useAuth()
-  const { setActiveCalendarId, refreshCalendars } = useCalendar()
+  const { refreshCalendars } = useCalendar()
   const [token] = useState(() => getInviteTokenFromUrl())
   const [preview, setPreview] = useState(null)
   const [error, setError] = useState('')
@@ -64,7 +64,7 @@ export function InviteAccept({ onNeedAuth }) {
       const result = await invitesApi.accept(token)
       if (result.user) updateUser(result.user)
       await refreshCalendars()
-      if (result.calendar?.id) setActiveCalendarId(result.calendar.id)
+      // Stay on home so the joined calendar preview remains visible.
       clearInviteFromUrl()
       setStatus('accepted')
     } catch (err) {

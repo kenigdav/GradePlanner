@@ -1,16 +1,16 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
 import { calendarsApi } from './api'
 import { useAuth } from './AuthContext'
 
 const CalendarContext = createContext(null)
-const ACTIVE_KEY = 'grade-planner-active-calendar'
 
 export function CalendarProvider({ children }) {
   const { user, isAdmin } = useAuth()
   const [calendars, setCalendars] = useState([])
-  const [activeCalendarId, setActiveCalendarIdState] = useState(() => localStorage.getItem(ACTIVE_KEY) || null)
+  const [activeCalendarId, setActiveCalendarIdState] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const lastUserIdRef = useRef(null)
 
   const activeCalendar = calendars.find((c) => c.id === activeCalendarId) || null
   const myRole = activeCalendar?.myRole || null
@@ -20,8 +20,6 @@ export function CalendarProvider({ children }) {
 
   const setActiveCalendarId = useCallback((id) => {
     setActiveCalendarIdState(id)
-    if (id) localStorage.setItem(ACTIVE_KEY, id)
-    else localStorage.removeItem(ACTIVE_KEY)
   }, [])
 
   const refreshCalendars = useCallback(async () => {
@@ -29,24 +27,13 @@ export function CalendarProvider({ children }) {
       setCalendars([])
       return []
     }
-    // Do not gate on local pending role — invite accept upgrades the user on the
-    // server first, and React state may still say pending for one render.
     setLoading(true)
     setError('')
     try {
       const list = await calendarsApi.list()
       setCalendars(list)
-      const stored = localStorage.getItem(ACTIVE_KEY)
-      if (stored && list.some((c) => c.id === stored)) {
-        setActiveCalendarIdState(stored)
-      } else if (list.length === 1) {
-        setActiveCalendarId(list[0].id)
-      } else if (stored && !list.some((c) => c.id === stored)) {
-        setActiveCalendarId(null)
-      }
       return list
     } catch (err) {
-      // Pending users without membership get 403 — treat as empty list
       setCalendars([])
       if (user.role !== 'pending') {
         setError(err.message || 'Failed to load calendars')
@@ -55,21 +42,33 @@ export function CalendarProvider({ children }) {
     } finally {
       setLoading(false)
     }
-  }, [user, setActiveCalendarId])
+  }, [user])
+
+  useEffect(() => {
+    // Clear legacy persisted selection from older builds.
+    try {
+      localStorage.removeItem('grade-planner-active-calendar')
+    } catch {
+      /* ignore */
+    }
+  }, [])
 
   useEffect(() => {
     if (!user) {
+      lastUserIdRef.current = null
       setCalendars([])
       setActiveCalendarIdState(null)
-      localStorage.removeItem(ACTIVE_KEY)
       return
+    }
+    // On login / account switch, always land on the home screen.
+    if (lastUserIdRef.current !== user.id) {
+      lastUserIdRef.current = user.id
+      setActiveCalendarIdState(null)
     }
     refreshCalendars()
   }, [user, refreshCalendars])
 
   // Drop stale selection when the active id isn't in the user's calendar list.
-  // While loading, keep the current selection so a join/leave refresh cannot
-  // briefly clear the id and show "not a member" on in-flight requests.
   useEffect(() => {
     if (!activeCalendarId) return
     if (loading) return
@@ -81,7 +80,7 @@ export function CalendarProvider({ children }) {
   const createCalendar = async (name) => {
     const created = await calendarsApi.create(name)
     await refreshCalendars()
-    setActiveCalendarId(created.id)
+    // Stay on home — user opens the calendar by pressing its preview.
     return created
   }
 

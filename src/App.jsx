@@ -306,12 +306,12 @@ export default function App() {
     if (result?.acceptedCalendar?.id) {
       clearInviteFromUrl()
       setInviteToken('')
-      setActiveCalendarId(result.acceptedCalendar.id)
+      await refreshCalendars()
+      // Stay on home — open the calendar from its preview tile.
     } else if (inviteToken && user) {
       try {
         const accepted = await invitesApi.accept(inviteToken)
         if (accepted.user) updateUser(accepted.user)
-        if (accepted.calendar?.id) setActiveCalendarId(accepted.calendar.id)
         clearInviteFromUrl()
         setInviteToken('')
         await refreshCalendars()

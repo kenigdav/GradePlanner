@@ -5,17 +5,6 @@ import './CalendarPicker.css'
 
 const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 
-function formatPreviewDate(dateStr) {
-  try {
-    return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-    })
-  } catch {
-    return dateStr
-  }
-}
-
 function pad2(n) {
   return String(n).padStart(2, '0')
 }
@@ -31,7 +20,7 @@ function MiniMonthPreview({ previewDates = [] }) {
   const todayKey = toDateKey(year, month, now.getDate())
   const dateSet = useMemo(() => new Set(previewDates), [previewDates])
 
-  const monthLabel = now.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+  const monthLabel = now.toLocaleDateString('en-US', { month: 'short' })
   const firstWeekday = new Date(year, month, 1).getDay()
   const daysInMonth = new Date(year, month + 1, 0).getDate()
   const cells = []
@@ -39,16 +28,16 @@ function MiniMonthPreview({ previewDates = [] }) {
   for (let d = 1; d <= daysInMonth; d++) cells.push(d)
 
   return (
-    <div className="invite-tile-month" aria-hidden="true">
-      <div className="invite-tile-month-label">{monthLabel}</div>
-      <div className="invite-tile-weekdays">
+    <div className="cal-tile-month" aria-hidden="true">
+      <div className="cal-tile-month-label">{monthLabel}</div>
+      <div className="cal-tile-weekdays">
         {WEEKDAYS.map((d, i) => (
           <span key={`${d}-${i}`}>{d}</span>
         ))}
       </div>
-      <div className="invite-tile-days">
+      <div className="cal-tile-days">
         {cells.map((day, i) => {
-          if (day == null) return <span key={`e-${i}`} className="invite-tile-day invite-tile-day--empty" />
+          if (day == null) return <span key={`e-${i}`} className="cal-tile-day cal-tile-day--empty" />
           const key = toDateKey(year, month, day)
           const hasWork = dateSet.has(key)
           const isToday = key === todayKey
@@ -56,9 +45,9 @@ function MiniMonthPreview({ previewDates = [] }) {
             <span
               key={key}
               className={[
-                'invite-tile-day',
-                hasWork ? 'invite-tile-day--busy' : '',
-                isToday ? 'invite-tile-day--today' : '',
+                'cal-tile-day',
+                hasWork ? 'cal-tile-day--busy' : '',
+                isToday ? 'cal-tile-day--today' : '',
               ].filter(Boolean).join(' ')}
             >
               {day}
@@ -70,55 +59,50 @@ function MiniMonthPreview({ previewDates = [] }) {
   )
 }
 
-function InviteTile({ invite, busy, onAccept, onDecline }) {
+function CalendarTile({
+  variant,
+  name,
+  subtitle,
+  previewDates,
+  busy,
+  onOpen,
+  onAccept,
+  onDecline,
+}) {
+  const isPending = variant === 'pending'
+  const surface = (
+    <div className={`cal-tile-surface cal-tile-surface--${variant}`}>
+      <header className="cal-tile-header">
+        <h3 className="cal-tile-name">{name}</h3>
+        {subtitle && <p className="cal-tile-sub">{subtitle}</p>}
+      </header>
+      <MiniMonthPreview previewDates={previewDates || []} />
+      <span className={`cal-tile-badge cal-tile-badge--${variant}`}>
+        {isPending ? 'Invite' : 'Joined'}
+      </span>
+    </div>
+  )
+
   return (
-    <li className="invite-tile">
-      <div className="invite-tile-surface">
-        <header className="invite-tile-header">
-          <h3 className="invite-tile-name">{invite.calendarName}</h3>
-          <p className="invite-tile-meta">
-            {invite.ownerName}
-            <span className="invite-tile-dot" aria-hidden="true">·</span>
-            <span className="invite-tile-role">{invite.role}</span>
-          </p>
-        </header>
+    <li className={`cal-tile cal-tile--${variant}`}>
+      {isPending ? (
+        surface
+      ) : (
+        <button type="button" className="cal-tile-open" onClick={onOpen} aria-label={`Open ${name}`}>
+          {surface}
+        </button>
+      )}
 
-        <MiniMonthPreview previewDates={invite.previewDates || []} />
-
-        <div className="invite-tile-upcoming">
-          {invite.previewAssignments?.length > 0 ? (
-            <ul>
-              {invite.previewAssignments.slice(0, 3).map((a, i) => (
-                <li key={`${a.date}-${a.subject}-${i}`}>
-                  <span className="invite-tile-upcoming-date">{formatPreviewDate(a.date)}</span>
-                  <span className="invite-tile-upcoming-subject">{a.subject}</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="invite-tile-upcoming-empty">No upcoming assignments</p>
-          )}
+      {isPending && (
+        <div className="cal-tile-actions">
+          <button type="button" className="btn btn-primary" disabled={busy} onClick={onAccept}>
+            {busy ? 'Joining…' : 'Accept'}
+          </button>
+          <button type="button" className="btn btn-ghost" disabled={busy} onClick={onDecline}>
+            Decline
+          </button>
         </div>
-      </div>
-
-      <div className="invite-tile-actions">
-        <button
-          type="button"
-          className="btn btn-primary"
-          disabled={busy}
-          onClick={onAccept}
-        >
-          {busy ? 'Joining…' : 'Accept'}
-        </button>
-        <button
-          type="button"
-          className="btn btn-ghost"
-          disabled={busy}
-          onClick={onDecline}
-        >
-          Decline
-        </button>
-      </div>
+      )}
     </li>
   )
 }
@@ -164,6 +148,7 @@ export function CalendarPicker() {
     try {
       await createCalendar(trimmed)
       setName('')
+      setJoinSuccess(`Created “${trimmed}”. Open it from your calendars below.`)
     } catch (err) {
       setCreateError(err.message || 'Failed to create calendar')
     } finally {
@@ -180,18 +165,13 @@ export function CalendarPicker() {
     setJoinSuccess('')
     try {
       const calendar = await calendarsApi.joinWithCode(code)
-      const list = await refreshCalendars()
+      await refreshCalendars()
       setJoinCode('')
       setJoinSuccess(
         calendar.alreadyMember
-          ? `You're already in ${calendar.name}.`
-          : `Joined ${calendar.name}.`
+          ? `You're already in ${calendar.name}. Open it below.`
+          : `Joined ${calendar.name}. Open it below.`
       )
-      if (calendar.id && list.some((c) => c.id === calendar.id)) {
-        setActiveCalendarId(calendar.id)
-      } else if (calendar.id) {
-        setJoinError('Joined, but the calendar list did not update. Refresh the page.')
-      }
     } catch (err) {
       setJoinError(err.message || 'Failed to join with that code')
     } finally {
@@ -199,17 +179,14 @@ export function CalendarPicker() {
     }
   }
 
-  const handleJoin = async (invite) => {
+  const handleAccept = async (invite) => {
     setInviteActionId(invite.id)
     setInviteError('')
     try {
-      const result = await invitesApi.accept(invite.token)
-      const list = await refreshCalendars()
+      await invitesApi.accept(invite.token)
+      await refreshCalendars()
       await loadPending()
-      const id = result.calendar?.id
-      if (id && list.some((c) => c.id === id)) {
-        setActiveCalendarId(id)
-      }
+      setJoinSuccess(`Joined ${invite.calendarName}. Open it below.`)
     } catch (err) {
       setInviteError(err.message || 'Failed to join calendar')
     } finally {
@@ -230,26 +207,49 @@ export function CalendarPicker() {
     }
   }
 
+  const showGrid = pendingInvites.length > 0 || calendars.length > 0 || invitesLoading || loading
+
   return (
     <div className="calendar-picker">
       <h1>Your calendars</h1>
       <p className="calendar-picker-hint">
-        Create a calendar, invite people by username, or join with a calendar code.
+        Open a joined calendar, or accept an invite. Create one or join with a code anytime.
       </p>
 
-      {(pendingInvites.length > 0 || invitesLoading) && (
-        <section className="calendar-picker-invites">
-          <h2>Invites for you</h2>
-          {invitesLoading ? (
-            <p className="calendar-picker-loading">Loading invites...</p>
+      {inviteError && <p className="calendar-picker-error">{inviteError}</p>}
+      {error && <p className="calendar-picker-error">{error}</p>}
+      {joinSuccess && <p className="calendar-picker-success">{joinSuccess}</p>}
+
+      {showGrid && (
+        <section className="calendar-picker-gallery" aria-label="Calendars">
+          <div className="calendar-picker-legend" aria-hidden="true">
+            <span className="calendar-picker-legend-item calendar-picker-legend-item--joined">Joined</span>
+            <span className="calendar-picker-legend-item calendar-picker-legend-item--pending">Invite</span>
+          </div>
+
+          {(loading || invitesLoading) && calendars.length === 0 && pendingInvites.length === 0 ? (
+            <p className="calendar-picker-loading">Loading calendars...</p>
           ) : (
-            <ul className="invite-tile-grid">
+            <ul className="cal-tile-grid">
+              {calendars.map((c) => (
+                <CalendarTile
+                  key={`joined-${c.id}`}
+                  variant="joined"
+                  name={c.name}
+                  subtitle={c.myRole}
+                  previewDates={c.previewDates}
+                  onOpen={() => setActiveCalendarId(c.id)}
+                />
+              ))}
               {pendingInvites.map((inv) => (
-                <InviteTile
-                  key={inv.id}
-                  invite={inv}
+                <CalendarTile
+                  key={`invite-${inv.id}`}
+                  variant="pending"
+                  name={inv.calendarName}
+                  subtitle={inv.role}
+                  previewDates={inv.previewDates}
                   busy={inviteActionId === inv.id}
-                  onAccept={() => handleJoin(inv)}
+                  onAccept={() => handleAccept(inv)}
                   onDecline={() => handleDecline(inv)}
                 />
               ))}
@@ -258,8 +258,11 @@ export function CalendarPicker() {
         </section>
       )}
 
-      {inviteError && <p className="calendar-picker-error">{inviteError}</p>}
-      {error && <p className="calendar-picker-error">{error}</p>}
+      {!loading && !invitesLoading && calendars.length === 0 && pendingInvites.length === 0 && (
+        <p className="calendar-picker-empty">
+          No calendars yet. Create one or join with a code.
+        </p>
+      )}
 
       <form className="calendar-picker-create" onSubmit={handleJoinCode}>
         <h2>Join with code</h2>
@@ -279,30 +282,7 @@ export function CalendarPicker() {
           </button>
         </div>
         {joinError && <p className="calendar-picker-error">{joinError}</p>}
-        {joinSuccess && <p className="calendar-picker-success">{joinSuccess}</p>}
       </form>
-
-      {loading ? (
-        <p className="calendar-picker-loading">Loading calendars...</p>
-      ) : calendars.length === 0 ? (
-        <p className="calendar-picker-empty">You don&apos;t have any calendars yet. Create one or join with a code.</p>
-      ) : (
-        <ul className="calendar-picker-list">
-          {calendars.map((c) => (
-            <li key={c.id}>
-              <button type="button" className="calendar-picker-item" onClick={() => setActiveCalendarId(c.id)}>
-                <span className="calendar-picker-item-main">
-                  <span className="calendar-picker-item-name">{c.name}</span>
-                  {c.joinCode && (
-                    <span className="calendar-picker-item-code">Code: {c.joinCode}</span>
-                  )}
-                </span>
-                <span className="calendar-picker-item-role">{c.myRole}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
 
       <form className="calendar-picker-create" onSubmit={handleCreate}>
         <h2>Create a calendar</h2>

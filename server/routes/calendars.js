@@ -5,6 +5,7 @@ import {
   members as membersStore,
   invites as invitesStore,
   users as usersStore,
+  assignments as assignmentsStore,
 } from '../data/store.js'
 import {
   authMiddleware,
@@ -102,6 +103,11 @@ router.get('/', authMiddleware, requireApprovedUser, async (req, res, next) => {
         }
       }
     }
+    const today = new Date().toISOString().slice(0, 10)
+    const horizon = new Date()
+    horizon.setDate(horizon.getDate() + 42)
+    const horizonStr = horizon.toISOString().slice(0, 10)
+
     const withRole = await Promise.all(
       list.map(async (c) => {
         let membership = await membersStore.get(c.id, req.user.id)
@@ -112,7 +118,15 @@ router.get('/', authMiddleware, requireApprovedUser, async (req, res, next) => {
           }
         }
         const withCode = await ensureJoinCode(c)
-        return { ...withCode, myRole: membership?.role || null }
+        const assignmentDates = (await assignmentsStore.getByCalendar(c.id))
+          .map((a) => a.date)
+          .filter((d) => d >= today && d <= horizonStr)
+        const previewDates = [...new Set(assignmentDates)]
+        return {
+          ...withCode,
+          myRole: membership?.role || null,
+          previewDates,
+        }
       })
     )
     res.json(withRole)
