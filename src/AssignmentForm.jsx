@@ -4,10 +4,6 @@ import './AssignmentForm.css'
 
 const today = () => new Date().toISOString().slice(0, 10)
 
-const DEFAULT_SUBJECTS = [
-  'Spanish', 'Science', 'Math', 'ELA', 'Social Studies', 'Music', 'PE', 'Engineering', 'Philosophy',
-]
-
 const MEDIA_IMAGE = 'image'
 const MEDIA_VIDEO = 'video'
 const MEDIA_PDF = 'pdf'
@@ -61,7 +57,7 @@ export function AssignmentForm({ onSubmit, suggestedDueDate, calendarId }) {
   const [images, setImages] = useState([])
   const [videos, setVideos] = useState([])
   const [pdfs, setPdfs] = useState([])
-  const [subjectOptions, setSubjectOptions] = useState(DEFAULT_SUBJECTS)
+  const [subjectOptions, setSubjectOptions] = useState([])
   const [fileTooLarge, setFileTooLarge] = useState(false)
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [viewMonth, setViewMonth] = useState(() => new Date())

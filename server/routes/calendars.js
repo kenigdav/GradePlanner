@@ -5,7 +5,6 @@ import {
   members as membersStore,
   invites as invitesStore,
   users as usersStore,
-  calendarSubjects,
 } from '../data/store.js'
 import {
   authMiddleware,
@@ -19,12 +18,6 @@ import { isEmailConfigured, sendMail } from '../lib/email.js'
 import * as sse from '../lib/sse.js'
 
 const router = Router()
-
-const DEFAULT_SUBJECTS = [
-  'Spanish', 'Science', 'Rohr Advisory A-Day', 'Rohr Advisory B-Day',
-  'Musick Advisory A-Day', 'Musick Advisory B-Day', 'PE', 'Math', 'Algebra',
-  'ELA', 'Social Studies', 'Music', 'Engineering', 'Philosophy',
-]
 
 const INVITE_DAYS = 14
 
@@ -94,9 +87,6 @@ router.post('/', authMiddleware, requireApprovedUser, async (req, res, next) => 
       userId: req.user.id,
       role: 'owner',
     })
-    for (const subject of DEFAULT_SUBJECTS) {
-      await calendarSubjects.add(calendar.id, subject)
-    }
     res.status(201).json({ ...calendar, myRole: 'owner' })
   } catch (err) {
     next(err)
