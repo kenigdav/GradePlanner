@@ -1,7 +1,22 @@
 import { Router } from 'express'
 import bcrypt from 'bcryptjs'
-import { users } from '../data/store.js'
+import { users, invites as invitesStore, members as membersStore, calendars as calendarsStore } from '../data/store.js'
 import { authMiddleware, signToken } from '../middleware/auth.js'
+
+function inviteExpired(invite) {
+  if (!invite?.expiresAt) return false
+  return new Date(invite.expiresAt).getTime() < Date.now()
+}
+
+function publicUser(user) {
+  return {
+    id: user.id,
+    fullName: user.fullName,
+    email: user.email,
+    username: user.username,
+    role: user.role,
+  }
+}
 
 const router = Router()
 
@@ -30,16 +45,7 @@ router.post('/login', async (req, res, next) => {
       return res.status(401).json({ error: 'Invalid username or password' })
     }
     const token = signToken({ userId: user.id })
-    return res.json({
-      token,
-      user: {
-        id: user.id,
-        fullName: user.fullName,
-        email: user.email,
-        username: user.username,
-        role: user.role,
-      },
-    })
+    return res.json({ token, user: publicUser(user) })
   } catch (err) {
     console.error('Login error:', err)
     res.status(500).json({ error: 'Sign in failed. Please try again.' })
@@ -48,34 +54,55 @@ router.post('/login', async (req, res, next) => {
 
 router.post('/register', async (req, res, next) => {
   try {
-    const { fullName, email, username, password } = req.body || {}
+    const { fullName, email, username, password, inviteToken } = req.body || {}
     if (!fullName || !email || !username || !password) {
       return res.status(400).json({ error: 'Full name, email, username and password required' })
     }
     if (await users.getByUsername(username)) {
       return res.status(400).json({ error: 'Username already taken' })
     }
-    if (await users.getByEmail(email)) {
+    const normalizedEmail = email.trim().toLowerCase()
+    if (await users.getByEmail(normalizedEmail)) {
       return res.status(400).json({ error: 'Email already registered' })
     }
+
+    let invite = null
+    if (inviteToken) {
+      invite = await invitesStore.getByToken(String(inviteToken).trim())
+      if (!invite || invite.status !== 'pending' || inviteExpired(invite)) {
+        return res.status(400).json({ error: 'Invite is invalid or expired' })
+      }
+      if (invite.email.toLowerCase() !== normalizedEmail) {
+        return res.status(400).json({ error: `Register with the invited email (${invite.email})` })
+      }
+    }
+
     const passwordHash = bcrypt.hashSync(password, 10)
     const user = await users.create({
       fullName: fullName.trim(),
-      email: email.trim().toLowerCase(),
+      email: normalizedEmail,
       username: username.trim(),
       passwordHash,
-      role: 'pending',
+      role: invite ? 'viewer' : 'pending',
     })
+
+    let acceptedCalendar = null
+    if (invite) {
+      await membersStore.add({
+        calendarId: invite.calendarId,
+        userId: user.id,
+        role: invite.role,
+      })
+      await invitesStore.update(invite.id, { status: 'accepted' })
+      const calendar = await calendarsStore.getById(invite.calendarId)
+      if (calendar) acceptedCalendar = { ...calendar, myRole: invite.role }
+    }
+
     const token = signToken({ userId: user.id })
     res.status(201).json({
       token,
-      user: {
-        id: user.id,
-        fullName: user.fullName,
-        email: user.email,
-        username: user.username,
-        role: user.role,
-      },
+      user: publicUser(user),
+      acceptedCalendar,
     })
   } catch (err) {
     next(err)

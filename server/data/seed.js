@@ -1,14 +1,9 @@
 import bcrypt from 'bcryptjs'
-import { users, subjects } from './store.js'
+import { users } from './store.js'
 
 const DEFAULT_ADMIN_USERNAME = 'admin'
 const DEFAULT_CONTRIBUTOR_USERNAME = 'Test 1'
 const DEFAULT_CONTRIBUTOR_PASSWORD = 'blabla1'
-const DEFAULT_SUBJECTS = [
-  'Spanish', 'Science', 'Rohr Advisory A-Day', 'Rohr Advisory B-Day',
-  'Musick Advisory A-Day', 'Musick Advisory B-Day', 'PE', 'Math', 'Algebra',
-  'ELA', 'Social Studies', 'Music', 'Engineering', 'Philosophy',
-]
 const DEFAULT_ADMIN_PASSWORD = 'blabla1'
 
 export async function seedDefaultAdmin() {
@@ -53,16 +48,7 @@ export async function seedDefaultContributor() {
   }
 }
 
+/** Subjects are seeded per-calendar on create; no global subject seed. */
 export async function seedDefaultSubjects() {
-  try {
-    const all = await subjects.getAll()
-    if (all.length > 0) return
-    for (const name of DEFAULT_SUBJECTS) {
-      await subjects.add(name)
-    }
-    console.log('Seeded default subjects')
-  } catch (err) {
-    console.error('Seed subjects error:', err)
-    throw err
-  }
+  return
 }

@@ -4,17 +4,18 @@ import './SubjectManagement.css'
 
 const SUBJECTS_CHANGED_EVENT = 'grade-planner-subjects-changed'
 
-export function SubjectManagement({ onClose }) {
+export function SubjectManagement({ onClose, calendarId }) {
   const [subjects, setSubjects] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [newSubject, setNewSubject] = useState('')
 
   const load = async () => {
+    if (!calendarId) return
     setLoading(true)
     setError('')
     try {
-      const list = await subjectsApi.list()
+      const list = await subjectsApi.list(calendarId)
       setSubjects(list)
     } catch (err) {
       setError(err.message || 'Failed to load subjects')
@@ -25,7 +26,7 @@ export function SubjectManagement({ onClose }) {
 
   useEffect(() => {
     load()
-  }, [])
+  }, [calendarId])
 
   const notifySubjectsChanged = () => {
     window.dispatchEvent(new CustomEvent(SUBJECTS_CHANGED_EVENT))
@@ -34,10 +35,10 @@ export function SubjectManagement({ onClose }) {
   const handleAdd = async (e) => {
     e.preventDefault()
     const name = newSubject.trim()
-    if (!name) return
+    if (!name || !calendarId) return
     setError('')
     try {
-      await subjectsApi.add(name)
+      await subjectsApi.add(name, calendarId)
       setNewSubject('')
       await load()
       notifySubjectsChanged()
@@ -47,9 +48,10 @@ export function SubjectManagement({ onClose }) {
   }
 
   const handleRemove = async (subjectName) => {
+    if (!calendarId) return
     setError('')
     try {
-      await subjectsApi.remove(subjectName)
+      await subjectsApi.remove(subjectName, calendarId)
       await load()
       notifySubjectsChanged()
     } catch (err) {

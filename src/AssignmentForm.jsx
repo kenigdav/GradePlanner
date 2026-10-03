@@ -53,7 +53,7 @@ function formatDisplayDate(dateStr) {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-export function AssignmentForm({ onSubmit, suggestedDueDate }) {
+export function AssignmentForm({ onSubmit, suggestedDueDate, calendarId }) {
   const [date, setDate] = useState(today())
   const [subject, setSubject] = useState('')
   const [description, setDescription] = useState('')
@@ -84,15 +84,16 @@ export function AssignmentForm({ onSubmit, suggestedDueDate }) {
   }, [showDatePicker])
 
   const loadSubjects = () => {
+    if (!calendarId) return
     subjectsApi
-      .list()
+      .list(calendarId)
       .then(setSubjectOptions)
       .catch(() => {})
   }
 
   useEffect(() => {
     loadSubjects()
-  }, [])
+  }, [calendarId])
 
   useEffect(() => {
     const onSubjectsChanged = () => loadSubjects()

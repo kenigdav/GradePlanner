@@ -27,20 +27,29 @@ export function AuthProvider({ children }) {
     setLoading(false)
   }, [])
 
+  const persistUser = (u) => {
+    localStorage.setItem(USER_KEY, JSON.stringify(u))
+    setUser(u)
+  }
+
   const login = async (username, password) => {
     const { token, user: u } = await authApi.login(username, password)
     localStorage.setItem(TOKEN_KEY, token)
-    localStorage.setItem(USER_KEY, JSON.stringify(u))
-    setUser(u)
+    persistUser(u)
     return u
   }
 
-  const register = async (fullName, email, username, password) => {
-    const { token, user: u } = await authApi.register(fullName, email, username, password)
+  const register = async (fullName, email, username, password, inviteToken) => {
+    const { token, user: u, acceptedCalendar } = await authApi.register(
+      fullName,
+      email,
+      username,
+      password,
+      inviteToken
+    )
     localStorage.setItem(TOKEN_KEY, token)
-    localStorage.setItem(USER_KEY, JSON.stringify(u))
-    setUser(u)
-    return u
+    persistUser(u)
+    return { user: u, acceptedCalendar }
   }
 
   const logout = () => {
@@ -49,14 +58,18 @@ export function AuthProvider({ children }) {
     setUser(null)
   }
 
+  const updateUser = (u) => {
+    persistUser(u)
+  }
+
   const changePassword = async (currentPassword, newPassword) => {
     await authApi.changePassword(currentPassword, newPassword)
   }
 
+  // Global app roles (approval / ban / user management) — calendar permissions are separate
   const isViewer = user?.role === 'viewer'
   const isContributor = user?.role === 'contributor'
   const isAdmin = user?.role === 'administrator'
-  const canEdit = isContributor || isAdmin
   const canManageUsers = isViewer || isContributor || isAdmin
   const canChangeRoles = isAdmin
 
@@ -68,11 +81,11 @@ export function AuthProvider({ children }) {
         login,
         register,
         logout,
+        updateUser,
         changePassword,
         isViewer,
         isContributor,
         isAdmin,
-        canEdit,
         canManageUsers,
         canChangeRoles,
       }}

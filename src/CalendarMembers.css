@@ -1,0 +1,128 @@
+.calendar-members {
+  min-width: min(520px, 90vw);
+}
+
+.calendar-members-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.calendar-members-header h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.calendar-members-list {
+  list-style: none;
+  margin: 0 0 1.25rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.calendar-members-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.calendar-members-info {
+  flex: 1;
+  min-width: 140px;
+  display: flex;
+  flex-direction: column;
+}
+
+.calendar-members-name {
+  font-weight: 600;
+}
+
+.calendar-members-email,
+.calendar-members-role {
+  font-size: 0.85rem;
+  opacity: 0.75;
+  text-transform: capitalize;
+}
+
+.calendar-members-row select {
+  padding: 0.35rem 0.5rem;
+  border-radius: var(--radius-sm, 6px);
+  border: 1px solid var(--border);
+  background: var(--bg, #0f0f12);
+  color: var(--text);
+}
+
+.calendar-members-invite h3,
+.calendar-members-pending h3 {
+  margin: 0 0 0.6rem;
+  font-size: 1rem;
+}
+
+.calendar-members-invite-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.calendar-members-invite-row input {
+  flex: 1;
+  min-width: 160px;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 6px);
+  background: var(--bg, #0f0f12);
+  color: var(--text);
+}
+
+.calendar-members-invite-result {
+  margin-top: 0.85rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 6px);
+  font-size: 0.9rem;
+}
+
+.calendar-members-link-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 0.5rem;
+}
+
+.calendar-members-link-row code {
+  flex: 1;
+  min-width: 0;
+  word-break: break-all;
+  font-size: 0.8rem;
+}
+
+.calendar-members-pending ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.calendar-members-pending li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.4rem 0;
+}
+
+.calendar-members-error {
+  color: #f87171;
+  margin: 0 0 0.75rem;
+}
+
+.calendar-members-loading {
+  opacity: 0.75;
+}

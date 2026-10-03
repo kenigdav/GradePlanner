@@ -45,10 +45,45 @@ function rowToUser(row) {
   }
 }
 
+function rowToCalendar(row) {
+  if (!row) return null
+  return {
+    id: row.id,
+    name: row.name,
+    createdByUserId: row.created_by_user_id,
+    createdAt: row.created_at ? new Date(row.created_at).toISOString() : null,
+  }
+}
+
+function rowToMember(row) {
+  if (!row) return null
+  return {
+    calendarId: row.calendar_id,
+    userId: row.user_id,
+    role: row.role,
+  }
+}
+
+function rowToInvite(row) {
+  if (!row) return null
+  return {
+    id: row.id,
+    calendarId: row.calendar_id,
+    email: row.email,
+    role: row.role,
+    token: row.token,
+    invitedByUserId: row.invited_by_user_id,
+    status: row.status,
+    createdAt: row.created_at ? new Date(row.created_at).toISOString() : null,
+    expiresAt: row.expires_at ? new Date(row.expires_at).toISOString() : null,
+  }
+}
+
 function rowToAssignment(row) {
   if (!row) return null
   return {
     id: row.id,
+    calendarId: row.calendar_id || null,
     date: row.date,
     subject: row.subject,
     description: row.description || '',
@@ -109,7 +144,8 @@ export const users = {
     let i = 1
     for (const k of allowed) {
       if (updates[k] === undefined) continue
-      const col = k === 'fullName' ? 'full_name' : k === 'passwordHash' ? 'password_hash' : k === 'lastSeenAt' ? 'last_seen_at' : k
+      const col =
+        k === 'fullName' ? 'full_name' : k === 'passwordHash' ? 'password_hash' : k === 'lastSeenAt' ? 'last_seen_at' : k
       setClauses.push(`${col} = $${i}`)
       values.push(updates[k])
       i++
@@ -126,20 +162,210 @@ export const users = {
   },
 }
 
+export const calendars = {
+  async getAll() {
+    await ensureSchema()
+    const res = await getPool().query('SELECT * FROM calendars ORDER BY name')
+    return res.rows.map(rowToCalendar)
+  },
+  async getById(id) {
+    await ensureSchema()
+    const res = await getPool().query('SELECT * FROM calendars WHERE id = $1', [id])
+    return rowToCalendar(res.rows[0])
+  },
+  async getForUser(userId) {
+    await ensureSchema()
+    const res = await getPool().query(
+      `SELECT c.* FROM calendars c
+       INNER JOIN calendar_members m ON m.calendar_id = c.id
+       WHERE m.user_id = $1
+       ORDER BY c.name`,
+      [userId]
+    )
+    return res.rows.map(rowToCalendar)
+  },
+  async create(calendar) {
+    await ensureSchema()
+    const id = randomUUID()
+    await getPool().query(
+      `INSERT INTO calendars (id, name, created_by_user_id, created_at)
+       VALUES ($1, $2, $3, NOW())`,
+      [id, calendar.name, calendar.createdByUserId]
+    )
+    return this.getById(id)
+  },
+  async update(id, updates) {
+    await ensureSchema()
+    if (updates.name === undefined) return this.getById(id)
+    await getPool().query('UPDATE calendars SET name = $1 WHERE id = $2', [updates.name, id])
+    return this.getById(id)
+  },
+  async delete(id) {
+    await ensureSchema()
+    const client = await getPool().connect()
+    try {
+      await client.query('BEGIN')
+      await client.query('DELETE FROM calendar_subjects WHERE calendar_id = $1', [id])
+      await client.query('DELETE FROM assignments WHERE calendar_id = $1', [id])
+      await client.query('DELETE FROM calendar_invites WHERE calendar_id = $1', [id])
+      await client.query('DELETE FROM calendar_members WHERE calendar_id = $1', [id])
+      const res = await client.query('DELETE FROM calendars WHERE id = $1', [id])
+      await client.query('COMMIT')
+      return (res.rowCount ?? 0) > 0
+    } catch (err) {
+      await client.query('ROLLBACK')
+      throw err
+    } finally {
+      client.release()
+    }
+  },
+}
+
+export const members = {
+  async getAll() {
+    await ensureSchema()
+    const res = await getPool().query('SELECT * FROM calendar_members')
+    return res.rows.map(rowToMember)
+  },
+  async getByCalendar(calendarId) {
+    await ensureSchema()
+    const res = await getPool().query('SELECT * FROM calendar_members WHERE calendar_id = $1', [calendarId])
+    return res.rows.map(rowToMember)
+  },
+  async get(calendarId, userId) {
+    await ensureSchema()
+    const res = await getPool().query(
+      'SELECT * FROM calendar_members WHERE calendar_id = $1 AND user_id = $2',
+      [calendarId, userId]
+    )
+    return rowToMember(res.rows[0])
+  },
+  async add({ calendarId, userId, role }) {
+    await ensureSchema()
+    await getPool().query(
+      `INSERT INTO calendar_members (calendar_id, user_id, role)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (calendar_id, user_id) DO UPDATE SET role = EXCLUDED.role`,
+      [calendarId, userId, role]
+    )
+    return this.get(calendarId, userId)
+  },
+  async updateRole(calendarId, userId, role) {
+    await ensureSchema()
+    const res = await getPool().query(
+      'UPDATE calendar_members SET role = $1 WHERE calendar_id = $2 AND user_id = $3',
+      [role, calendarId, userId]
+    )
+    if ((res.rowCount ?? 0) === 0) return null
+    return this.get(calendarId, userId)
+  },
+  async remove(calendarId, userId) {
+    await ensureSchema()
+    const res = await getPool().query(
+      'DELETE FROM calendar_members WHERE calendar_id = $1 AND user_id = $2',
+      [calendarId, userId]
+    )
+    return (res.rowCount ?? 0) > 0
+  },
+  async countOwners(calendarId) {
+    await ensureSchema()
+    const res = await getPool().query(
+      `SELECT COUNT(*)::int AS n FROM calendar_members
+       WHERE calendar_id = $1 AND role = 'owner'`,
+      [calendarId]
+    )
+    return res.rows[0]?.n ?? 0
+  },
+}
+
+export const invites = {
+  async getAll() {
+    await ensureSchema()
+    const res = await getPool().query('SELECT * FROM calendar_invites ORDER BY created_at DESC')
+    return res.rows.map(rowToInvite)
+  },
+  async getById(id) {
+    await ensureSchema()
+    const res = await getPool().query('SELECT * FROM calendar_invites WHERE id = $1', [id])
+    return rowToInvite(res.rows[0])
+  },
+  async getByToken(token) {
+    await ensureSchema()
+    const res = await getPool().query('SELECT * FROM calendar_invites WHERE token = $1', [token])
+    return rowToInvite(res.rows[0])
+  },
+  async getByCalendar(calendarId) {
+    await ensureSchema()
+    const res = await getPool().query(
+      'SELECT * FROM calendar_invites WHERE calendar_id = $1 ORDER BY created_at DESC',
+      [calendarId]
+    )
+    return res.rows.map(rowToInvite)
+  },
+  async create(invite) {
+    await ensureSchema()
+    const id = randomUUID()
+    await getPool().query(
+      `INSERT INTO calendar_invites
+         (id, calendar_id, email, role, token, invited_by_user_id, status, created_at, expires_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), $8)`,
+      [
+        id,
+        invite.calendarId,
+        invite.email,
+        invite.role,
+        invite.token,
+        invite.invitedByUserId,
+        invite.status || 'pending',
+        invite.expiresAt || null,
+      ]
+    )
+    return this.getById(id)
+  },
+  async update(id, updates) {
+    await ensureSchema()
+    const allowed = ['status', 'role', 'email']
+    const setClauses = []
+    const values = []
+    let i = 1
+    for (const k of allowed) {
+      if (updates[k] === undefined) continue
+      setClauses.push(`${k} = $${i}`)
+      values.push(updates[k])
+      i++
+    }
+    if (setClauses.length === 0) return this.getById(id)
+    values.push(id)
+    await getPool().query(`UPDATE calendar_invites SET ${setClauses.join(', ')} WHERE id = $${i}`, values)
+    return this.getById(id)
+  },
+}
+
 export const assignments = {
   async getAll() {
     await ensureSchema()
     const res = await getPool().query('SELECT * FROM assignments ORDER BY date, subject')
     return res.rows.map(rowToAssignment)
   },
+  async getByCalendar(calendarId) {
+    await ensureSchema()
+    const res = await getPool().query(
+      'SELECT * FROM assignments WHERE calendar_id = $1 ORDER BY date, subject',
+      [calendarId]
+    )
+    return res.rows.map(rowToAssignment)
+  },
   async create(assignment) {
     await ensureSchema()
     const id = randomUUID()
     await getPool().query(
-      `INSERT INTO assignments (id, date, subject, description, images, videos, pdfs, links, created_by_user_id, created_by_name, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, COALESCE($11::timestamptz, NOW()))`,
+      `INSERT INTO assignments
+         (id, calendar_id, date, subject, description, images, videos, pdfs, links,
+          created_by_user_id, created_by_name, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, COALESCE($12::timestamptz, NOW()))`,
       [
         id,
+        assignment.calendarId || null,
         assignment.date,
         assignment.subject,
         assignment.description || '',
@@ -169,8 +395,7 @@ export const assignments = {
     let i = 1
     for (const k of allowed) {
       if (updates[k] === undefined) continue
-      const col = k
-      setClauses.push(`${col} = $${i}`)
+      setClauses.push(`${k} = $${i}`)
       values.push(Array.isArray(updates[k]) ? JSON.stringify(updates[k]) : updates[k])
       i++
     }
@@ -186,6 +411,7 @@ export const assignments = {
   },
 }
 
+/** Legacy global subjects. */
 export const subjects = {
   async getAll() {
     await ensureSchema()
@@ -206,6 +432,42 @@ export const subjects = {
     const trimmed = (name && String(name).trim()) || ''
     if (!trimmed) return false
     const res = await getPool().query('DELETE FROM subjects WHERE LOWER(name) = LOWER($1)', [trimmed])
+    return (res.rowCount ?? 0) > 0
+  },
+}
+
+export const calendarSubjects = {
+  async getByCalendar(calendarId) {
+    await ensureSchema()
+    const res = await getPool().query(
+      'SELECT name FROM calendar_subjects WHERE calendar_id = $1 ORDER BY name',
+      [calendarId]
+    )
+    return res.rows.map((r) => r.name)
+  },
+  async add(calendarId, name) {
+    await ensureSchema()
+    const trimmed = (name && String(name).trim()) || ''
+    if (!trimmed) return null
+    const existing = await getPool().query(
+      'SELECT 1 FROM calendar_subjects WHERE calendar_id = $1 AND LOWER(name) = LOWER($2)',
+      [calendarId, trimmed]
+    )
+    if (existing.rows.length > 0) return trimmed
+    await getPool().query('INSERT INTO calendar_subjects (calendar_id, name) VALUES ($1, $2)', [
+      calendarId,
+      trimmed,
+    ])
+    return trimmed
+  },
+  async remove(calendarId, name) {
+    await ensureSchema()
+    const trimmed = (name && String(name).trim()) || ''
+    if (!trimmed) return false
+    const res = await getPool().query(
+      'DELETE FROM calendar_subjects WHERE calendar_id = $1 AND LOWER(name) = LOWER($2)',
+      [calendarId, trimmed]
+    )
     return (res.rowCount ?? 0) > 0
   },
 }

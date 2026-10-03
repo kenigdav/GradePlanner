@@ -9,6 +9,8 @@ import userRoutes from './routes/users.js'
 import assignmentRoutes from './routes/assignments.js'
 import notifyRoutes from './routes/notify.js'
 import eventRoutes from './routes/events.js'
+import calendarRoutes from './routes/calendars.js'
+import inviteRoutes from './routes/invites.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -29,6 +31,8 @@ async function run() {
 
   app.use('/api/auth', authRoutes)
   app.use('/api/users', userRoutes)
+  app.use('/api/calendars', calendarRoutes)
+  app.use('/api/invites', inviteRoutes)
   app.use('/api/assignments', assignmentRoutes)
   app.use('/api/subjects', subjectRoutes)
   app.use('/api/notify', notifyRoutes)

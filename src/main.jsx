@@ -2,6 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { ErrorBoundary } from './ErrorBoundary'
 import { AuthProvider } from './AuthContext'
+import { CalendarProvider } from './CalendarContext'
 import App from './App.jsx'
 import './index.css'
 
@@ -27,7 +28,9 @@ if (!rootEl) {
     <React.StrictMode>
       <ErrorBoundary>
         <AuthProvider>
-          <App />
+          <CalendarProvider>
+            <App />
+          </CalendarProvider>
         </AuthProvider>
       </ErrorBoundary>
     </React.StrictMode>,

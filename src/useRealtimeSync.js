@@ -8,25 +8,37 @@ const MIN_RECONNECT_MS = 1000
 const MAX_RECONNECT_MS = 30000
 
 /**
- * Subscribe to SSE events for real-time sync. When assignments or subjects change
- * on the server (e.g. another user), the provided callbacks run.
+ * Subscribe to SSE events for real-time sync.
  * @param {object} options
- * @param {boolean} options.enabled - Only connect when true (e.g. user is logged in)
- * @param {() => void | Promise<void>} options.onAssignmentsChanged - Called when assignments.changed is received
- * @param {() => void} [options.onSubjectsChanged] - Called when subjects.changed is received (default: dispatch custom event)
- * @param {() => void} [options.onReconnect] - Called after reconnecting; use to refetch assignments and subjects
+ * @param {boolean} options.enabled
+ * @param {string|null} [options.calendarId] - Only react to events for this calendar (when present)
+ * @param {() => void | Promise<void>} options.onAssignmentsChanged
+ * @param {() => void} [options.onSubjectsChanged]
+ * @param {() => void} [options.onCalendarsChanged]
+ * @param {() => void} [options.onReconnect]
  */
-export function useRealtimeSync({ enabled, onAssignmentsChanged, onSubjectsChanged, onReconnect }) {
+export function useRealtimeSync({
+  enabled,
+  calendarId,
+  onAssignmentsChanged,
+  onSubjectsChanged,
+  onCalendarsChanged,
+  onReconnect,
+}) {
   const onAssignmentsRef = useRef(onAssignmentsChanged)
   const onSubjectsRef = useRef(onSubjectsChanged)
+  const onCalendarsRef = useRef(onCalendarsChanged)
   const onReconnectRef = useRef(onReconnect)
+  const calendarIdRef = useRef(calendarId)
   const reconnectAttemptRef = useRef(0)
   const eventSourceRef = useRef(null)
   const timeoutRef = useRef(null)
 
   onAssignmentsRef.current = onAssignmentsChanged
   onSubjectsRef.current = onSubjectsChanged
+  onCalendarsRef.current = onCalendarsChanged
   onReconnectRef.current = onReconnect
+  calendarIdRef.current = calendarId
 
   useEffect(() => {
     if (!enabled) return
@@ -36,6 +48,12 @@ export function useRealtimeSync({ enabled, onAssignmentsChanged, onSubjectsChang
 
     const url = `${EVENTS_PATH}?token=${encodeURIComponent(token)}`
     let isFirstConnect = true
+
+    function matchesCalendar(data) {
+      if (!data.calendarId) return true
+      if (!calendarIdRef.current) return true
+      return data.calendarId === calendarIdRef.current
+    }
 
     function connect() {
       const es = new EventSource(url)
@@ -52,6 +70,11 @@ export function useRealtimeSync({ enabled, onAssignmentsChanged, onSubjectsChang
       es.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data)
+          if (data.type === 'calendars.changed') {
+            onCalendarsRef.current?.()
+            return
+          }
+          if (!matchesCalendar(data)) return
           if (data.type === 'assignments.changed' && onAssignmentsRef.current) {
             onAssignmentsRef.current()
           } else if (data.type === 'subjects.changed') {
@@ -62,7 +85,7 @@ export function useRealtimeSync({ enabled, onAssignmentsChanged, onSubjectsChang
             }
           }
         } catch (_) {
-          // ignore parse errors (e.g. ping comment)
+          // ignore parse errors
         }
       }
 

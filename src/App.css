@@ -6,9 +6,23 @@
 .app--loading,
 .app--auth {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   min-height: 100vh;
+  gap: 0.5rem;
+}
+
+.invite-banner-wrap {
+  display: flex;
+  justify-content: center;
+  padding: 0 1rem 1rem;
+}
+
+.role-info-subtitle {
+  margin: 0.75rem 0 0.35rem;
+  font-size: 0.95rem;
+  font-weight: 600;
 }
 
 .header-inner {

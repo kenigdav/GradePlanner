@@ -1,0 +1,91 @@
+.calendar-picker {
+  width: min(480px, 100%);
+  margin: 0 auto;
+  padding: 1.5rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.calendar-picker h1 {
+  margin: 0 0 0.5rem;
+  font-size: 1.5rem;
+}
+
+.calendar-picker-hint {
+  margin: 0 0 1.25rem;
+  color: var(--text-muted, #888);
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.calendar-picker-list {
+  list-style: none;
+  margin: 0 0 1.5rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.calendar-picker-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  text-align: left;
+  background: var(--bg, transparent);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 6px);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.calendar-picker-item:hover {
+  border-color: var(--accent, #7c3aed);
+}
+
+.calendar-picker-item-name {
+  font-weight: 600;
+}
+
+.calendar-picker-item-role {
+  font-size: 0.8rem;
+  text-transform: capitalize;
+  opacity: 0.75;
+}
+
+.calendar-picker-create h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.05rem;
+}
+
+.calendar-picker-create-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.calendar-picker-create-row input {
+  flex: 1;
+  min-width: 180px;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 6px);
+  background: var(--bg, #0f0f12);
+  color: var(--text);
+}
+
+.calendar-picker-error {
+  color: #f87171;
+  margin: 0.75rem 0 0;
+  font-size: 0.9rem;
+}
+
+.calendar-picker-loading,
+.calendar-picker-empty {
+  margin: 0 0 1.25rem;
+  color: var(--text-muted, #888);
+}

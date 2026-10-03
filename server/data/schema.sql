@@ -14,6 +14,37 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE UNIQUE INDEX IF NOT EXISTS users_username_lower ON users (LOWER(username));
 CREATE UNIQUE INDEX IF NOT EXISTS users_email_lower ON users (LOWER(email));
 
+CREATE TABLE IF NOT EXISTS calendars (
+  id UUID PRIMARY KEY,
+  name TEXT NOT NULL,
+  created_by_user_id UUID NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS calendar_members (
+  calendar_id UUID NOT NULL REFERENCES calendars(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  role TEXT NOT NULL,
+  PRIMARY KEY (calendar_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS calendar_members_user_id ON calendar_members (user_id);
+
+CREATE TABLE IF NOT EXISTS calendar_invites (
+  id UUID PRIMARY KEY,
+  calendar_id UUID NOT NULL REFERENCES calendars(id) ON DELETE CASCADE,
+  email TEXT NOT NULL,
+  role TEXT NOT NULL,
+  token TEXT NOT NULL UNIQUE,
+  invited_by_user_id UUID NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  expires_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS calendar_invites_calendar_id ON calendar_invites (calendar_id);
+CREATE INDEX IF NOT EXISTS calendar_invites_email_lower ON calendar_invites (LOWER(email));
+
 CREATE TABLE IF NOT EXISTS assignments (
   id UUID PRIMARY KEY,
   date TEXT NOT NULL,
@@ -25,10 +56,20 @@ CREATE TABLE IF NOT EXISTS assignments (
   links JSONB NOT NULL DEFAULT '[]',
   created_by_user_id UUID NOT NULL,
   created_by_name TEXT NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  calendar_id UUID
 );
 ALTER TABLE assignments ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+ALTER TABLE assignments ADD COLUMN IF NOT EXISTS calendar_id UUID;
+CREATE INDEX IF NOT EXISTS assignments_calendar_id ON assignments (calendar_id);
 
+-- Legacy global subjects table (unused by new calendars; kept for compatibility)
 CREATE TABLE IF NOT EXISTS subjects (
   name TEXT PRIMARY KEY
+);
+
+CREATE TABLE IF NOT EXISTS calendar_subjects (
+  calendar_id UUID NOT NULL REFERENCES calendars(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  PRIMARY KEY (calendar_id, name)
 );
