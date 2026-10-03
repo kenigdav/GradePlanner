@@ -1,7 +1,9 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useCalendar } from './CalendarContext'
 import { calendarsApi, invitesApi } from './api'
 import './CalendarPicker.css'
+
+const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 
 function formatPreviewDate(dateStr) {
   try {
@@ -12,6 +14,113 @@ function formatPreviewDate(dateStr) {
   } catch {
     return dateStr
   }
+}
+
+function pad2(n) {
+  return String(n).padStart(2, '0')
+}
+
+function toDateKey(year, monthIndex, day) {
+  return `${year}-${pad2(monthIndex + 1)}-${pad2(day)}`
+}
+
+function MiniMonthPreview({ previewDates = [] }) {
+  const now = useMemo(() => new Date(), [])
+  const year = now.getFullYear()
+  const month = now.getMonth()
+  const todayKey = toDateKey(year, month, now.getDate())
+  const dateSet = useMemo(() => new Set(previewDates), [previewDates])
+
+  const monthLabel = now.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+  const firstWeekday = new Date(year, month, 1).getDay()
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+  const cells = []
+  for (let i = 0; i < firstWeekday; i++) cells.push(null)
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d)
+
+  return (
+    <div className="invite-tile-month" aria-hidden="true">
+      <div className="invite-tile-month-label">{monthLabel}</div>
+      <div className="invite-tile-weekdays">
+        {WEEKDAYS.map((d, i) => (
+          <span key={`${d}-${i}`}>{d}</span>
+        ))}
+      </div>
+      <div className="invite-tile-days">
+        {cells.map((day, i) => {
+          if (day == null) return <span key={`e-${i}`} className="invite-tile-day invite-tile-day--empty" />
+          const key = toDateKey(year, month, day)
+          const hasWork = dateSet.has(key)
+          const isToday = key === todayKey
+          return (
+            <span
+              key={key}
+              className={[
+                'invite-tile-day',
+                hasWork ? 'invite-tile-day--busy' : '',
+                isToday ? 'invite-tile-day--today' : '',
+              ].filter(Boolean).join(' ')}
+            >
+              {day}
+            </span>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function InviteTile({ invite, busy, onAccept, onDecline }) {
+  return (
+    <li className="invite-tile">
+      <div className="invite-tile-surface">
+        <header className="invite-tile-header">
+          <h3 className="invite-tile-name">{invite.calendarName}</h3>
+          <p className="invite-tile-meta">
+            {invite.ownerName}
+            <span className="invite-tile-dot" aria-hidden="true">·</span>
+            <span className="invite-tile-role">{invite.role}</span>
+          </p>
+        </header>
+
+        <MiniMonthPreview previewDates={invite.previewDates || []} />
+
+        <div className="invite-tile-upcoming">
+          {invite.previewAssignments?.length > 0 ? (
+            <ul>
+              {invite.previewAssignments.slice(0, 3).map((a, i) => (
+                <li key={`${a.date}-${a.subject}-${i}`}>
+                  <span className="invite-tile-upcoming-date">{formatPreviewDate(a.date)}</span>
+                  <span className="invite-tile-upcoming-subject">{a.subject}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="invite-tile-upcoming-empty">No upcoming assignments</p>
+          )}
+        </div>
+
+        <div className="invite-tile-actions">
+          <button
+            type="button"
+            className="btn btn-primary"
+            disabled={busy}
+            onClick={onAccept}
+          >
+            {busy ? 'Joining…' : 'Accept'}
+          </button>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            disabled={busy}
+            onClick={onDecline}
+          >
+            Decline
+          </button>
+        </div>
+      </div>
+    </li>
+  )
 }
 
 export function CalendarPicker() {
@@ -78,7 +187,6 @@ export function CalendarPicker() {
           ? `You're already in ${calendar.name}.`
           : `Joined ${calendar.name}.`
       )
-      // Select only after the refreshed list includes this calendar.
       if (calendar.id && list.some((c) => c.id === calendar.id)) {
         setActiveCalendarId(calendar.id)
       } else if (calendar.id) {
@@ -135,47 +243,15 @@ export function CalendarPicker() {
           {invitesLoading ? (
             <p className="calendar-picker-loading">Loading invites...</p>
           ) : (
-            <ul className="calendar-invite-list">
+            <ul className="invite-tile-grid">
               {pendingInvites.map((inv) => (
-                <li key={inv.id} className="calendar-invite-card">
-                  <div className="calendar-invite-card-main">
-                    <span className="calendar-invite-name">{inv.calendarName}</span>
-                    <span className="calendar-invite-owner">Owner: {inv.ownerName}</span>
-                    <span className="calendar-invite-role">Invited as {inv.role}</span>
-                  </div>
-                  <div className="calendar-invite-preview" aria-label="Calendar preview">
-                    {inv.previewAssignments?.length > 0 ? (
-                      <ul>
-                        {inv.previewAssignments.map((a, i) => (
-                          <li key={`${a.date}-${a.subject}-${i}`}>
-                            <span className="calendar-invite-preview-date">{formatPreviewDate(a.date)}</span>
-                            <span>{a.subject}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="calendar-invite-preview-empty">No upcoming assignments yet</p>
-                    )}
-                  </div>
-                  <div className="calendar-invite-actions">
-                    <button
-                      type="button"
-                      className="btn btn-primary"
-                      disabled={inviteActionId === inv.id}
-                      onClick={() => handleJoin(inv)}
-                    >
-                      {inviteActionId === inv.id ? 'Joining…' : 'Accept'}
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-ghost"
-                      disabled={inviteActionId === inv.id}
-                      onClick={() => handleDecline(inv)}
-                    >
-                      Decline
-                    </button>
-                  </div>
-                </li>
+                <InviteTile
+                  key={inv.id}
+                  invite={inv}
+                  busy={inviteActionId === inv.id}
+                  onAccept={() => handleJoin(inv)}
+                  onDecline={() => handleDecline(inv)}
+                />
               ))}
             </ul>
           )}

@@ -41,11 +41,22 @@ async function buildInvitePreview(invite) {
   if (!calendar) return null
   const ownerName = await getOwnerName(calendar)
   const today = new Date().toISOString().slice(0, 10)
-  const upcoming = (await assignmentsStore.getByCalendar(calendar.id))
+  const all = await assignmentsStore.getByCalendar(calendar.id)
+  const upcoming = all
     .filter((a) => a.date >= today)
     .sort((a, b) => a.date.localeCompare(b.date) || a.subject.localeCompare(b.subject))
-    .slice(0, 3)
-    .map((a) => ({ date: a.date, subject: a.subject }))
+  const previewAssignments = upcoming.slice(0, 4).map((a) => ({ date: a.date, subject: a.subject }))
+  // Dates with work in the next ~6 weeks — used for the mini calendar dots
+  const horizon = new Date()
+  horizon.setDate(horizon.getDate() + 42)
+  const horizonStr = horizon.toISOString().slice(0, 10)
+  const previewDates = [
+    ...new Set(
+      all
+        .map((a) => a.date)
+        .filter((d) => d >= today && d <= horizonStr)
+    ),
+  ]
 
   return {
     id: invite.id,
@@ -58,7 +69,8 @@ async function buildInvitePreview(invite) {
     calendarId: calendar.id,
     calendarName: calendar.name,
     ownerName,
-    previewAssignments: upcoming,
+    previewAssignments,
+    previewDates,
   }
 }
 
