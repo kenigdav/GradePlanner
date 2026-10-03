@@ -138,20 +138,24 @@ router.post('/accept', authMiddleware, async (req, res, next) => {
       return res.status(404).json({ error: 'Calendar not found' })
     }
 
-    await membersStore.add({
-      calendarId: invite.calendarId,
-      userId: req.user.id,
-      role: invite.role,
-    })
+    const existing = await membersStore.get(invite.calendarId, req.user.id)
+    if (!existing) {
+      await membersStore.add({
+        calendarId: invite.calendarId,
+        userId: req.user.id,
+        role: invite.role,
+      })
+    }
     await invitesStore.update(invite.id, { status: 'accepted' })
 
     if (req.user.role === 'pending') {
       await usersStore.update(req.user.id, { role: 'viewer' })
     }
 
+    const membership = existing || (await membersStore.get(invite.calendarId, req.user.id))
     const refreshed = await usersStore.getById(req.user.id)
     res.json({
-      calendar: { ...calendar, myRole: invite.role },
+      calendar: { ...calendar, myRole: membership?.role || invite.role },
       user: {
         id: refreshed.id,
         fullName: refreshed.fullName,

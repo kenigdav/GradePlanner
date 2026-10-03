@@ -52,7 +52,7 @@ router.post('/', authMiddleware, requireApprovedUser, async (req, res, next) => 
   try {
     const ctx = await loadMembership(req, res)
     if (!ctx) return
-    if (!canEditCalendar(ctx.membership.role)) {
+    if (!canEditCalendar(ctx.membership.role, req.user)) {
       return res.status(403).json({ error: 'Insufficient calendar permissions' })
     }
     const body = req.body || {}
@@ -85,7 +85,7 @@ router.patch('/:id', authMiddleware, requireApprovedUser, async (req, res, next)
       return res.status(403).json({ error: 'This assignment is not part of a shared calendar' })
     }
     const membership = await membersStore.get(existing.calendarId, req.user.id)
-    if (!membership || !canEditCalendar(membership.role)) {
+    if (!membership || !canEditCalendar(membership.role, req.user)) {
       return res.status(403).json({ error: 'Insufficient calendar permissions' })
     }
     const updates = req.body || {}
@@ -112,7 +112,7 @@ router.delete('/:id', authMiddleware, requireApprovedUser, async (req, res, next
       return res.status(403).json({ error: 'This assignment is not part of a shared calendar' })
     }
     const membership = await membersStore.get(existing.calendarId, req.user.id)
-    if (!membership || !canEditCalendar(membership.role)) {
+    if (!membership || !canEditCalendar(membership.role, req.user)) {
       return res.status(403).json({ error: 'Insufficient calendar permissions' })
     }
     await assignmentsStore.delete(req.params.id)

@@ -9,7 +9,7 @@ const INVITE_ROLES = ['editor', 'viewer']
 
 export function CalendarMembers({ onClose }) {
   const { user } = useAuth()
-  const { activeCalendar, activeCalendarId, canManage, refreshCalendars, setActiveCalendarId } = useCalendar()
+  const { activeCalendar, canManage, refreshCalendars, setActiveCalendarId } = useCalendar()
   const [members, setMembers] = useState([])
   const [invites, setInvites] = useState([])
   const [loading, setLoading] = useState(true)
@@ -20,11 +20,17 @@ export function CalendarMembers({ onClose }) {
   const [busy, setBusy] = useState(false)
   const [copied, setCopied] = useState(false)
 
-  const calendarId = activeCalendar?.id || activeCalendarId
+  // Only use the calendar from the loaded list — never a stale localStorage id alone.
+  const calendarId = activeCalendar?.id || null
   const joinCode = activeCalendar?.joinCode || ''
 
   const load = async () => {
-    if (!calendarId) return
+    if (!calendarId) {
+      setLoading(false)
+      setError('No calendar selected. Switch calendar and try again.')
+      setMembers([])
+      return
+    }
     setLoading(true)
     setError('')
     try {
@@ -49,7 +55,9 @@ export function CalendarMembers({ onClose }) {
   }
 
   useEffect(() => {
-    load()
+    // Refresh roles so manage controls match the server before editing members.
+    refreshCalendars().finally(() => load())
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reload when calendar or manage rights change
   }, [calendarId, canManage])
 
   const handleInvite = async (e) => {
@@ -74,6 +82,10 @@ export function CalendarMembers({ onClose }) {
   }
 
   const handleRoleChange = async (userId, role) => {
+    if (!calendarId) {
+      setError('No calendar selected. Switch calendar and try again.')
+      return
+    }
     setBusy(true)
     setError('')
     setSuccess('')
@@ -83,12 +95,17 @@ export function CalendarMembers({ onClose }) {
       await refreshCalendars()
     } catch (err) {
       setError(err.message || 'Failed to update role')
+      await load()
     } finally {
       setBusy(false)
     }
   }
 
   const handleKick = async (member) => {
+    if (!calendarId || !member?.userId) {
+      setError('No calendar selected. Switch calendar and try again.')
+      return
+    }
     const label = member.user?.fullName || member.user?.username || 'this member'
     if (!window.confirm(`Kick ${label} out of this calendar?`)) return
     setBusy(true)

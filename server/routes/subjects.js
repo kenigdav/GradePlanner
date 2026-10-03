@@ -52,7 +52,7 @@ router.post('/', authMiddleware, requireApprovedUser, async (req, res, next) => 
   try {
     const ctx = await loadMembership(req, res)
     if (!ctx) return
-    if (!canManageCalendar(ctx.membership.role)) {
+    if (!canManageCalendar(ctx.membership.role, req.user)) {
       return res.status(403).json({ error: 'Only calendar owners can manage subjects' })
     }
     const { subject } = req.body || {}
@@ -75,7 +75,7 @@ router.delete('/', authMiddleware, requireApprovedUser, async (req, res, next) =
   try {
     const ctx = await loadMembership(req, res)
     if (!ctx) return
-    if (!canManageCalendar(ctx.membership.role)) {
+    if (!canManageCalendar(ctx.membership.role, req.user)) {
       return res.status(403).json({ error: 'Only calendar owners can manage subjects' })
     }
     const { subject } = req.body || {}

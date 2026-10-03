@@ -27,7 +27,7 @@ router.post('/due-tomorrow', authMiddleware, requireApprovedUser, async (req, re
   }
 
   const membership = await membersStore.get(calendarId, req.user.id)
-  if (!membership || !canManageCalendar(membership.role)) {
+  if (!membership || !canManageCalendar(membership.role, req.user)) {
     return res.status(403).json({ error: 'Only calendar owners can send notifications' })
   }
 

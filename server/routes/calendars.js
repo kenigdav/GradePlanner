@@ -101,12 +101,19 @@ router.get('/', authMiddleware, requireApprovedUser, async (req, res, next) => {
     const withRole = await Promise.all(
       list.map(async (c) => {
         let membership = await membersStore.get(c.id, req.user.id)
-        if (!membership && c.createdByUserId === req.user.id) {
-          membership = await membersStore.add({
-            calendarId: c.id,
-            userId: req.user.id,
-            role: 'owner',
-          })
+        if (c.createdByUserId === req.user.id) {
+          if (!membership) {
+            membership = await membersStore.add({
+              calendarId: c.id,
+              userId: req.user.id,
+              role: 'owner',
+            })
+          } else if (membership.role !== 'owner') {
+            const owners = await membersStore.countOwners(c.id)
+            if (owners === 0) {
+              membership = await membersStore.updateRole(c.id, req.user.id, 'owner')
+            }
+          }
         }
         const withCode = await ensureJoinCode(c)
         return { ...withCode, myRole: membership?.role || null }
@@ -336,7 +343,7 @@ router.delete(
     try {
       const { userId } = req.params
       const isSelf = userId === req.user.id
-      const isOwner = req.membership.role === 'owner'
+      const isOwner = req.membership.role === 'owner' // app admins get owner via requireCalendarMember
       if (!isSelf && !isOwner) {
         return res.status(403).json({ error: 'Only owners can remove other members' })
       }

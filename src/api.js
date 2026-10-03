@@ -169,6 +169,9 @@ export const calendarsApi = {
     })
   },
   async removeMember(calendarId, userId) {
+    if (!calendarId || !userId) {
+      throw new Error('Calendar and member are required.')
+    }
     const token = getToken()
     if (!token) {
       onAuthFailure?.()

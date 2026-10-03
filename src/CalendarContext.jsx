@@ -6,7 +6,7 @@ const CalendarContext = createContext(null)
 const ACTIVE_KEY = 'grade-planner-active-calendar'
 
 export function CalendarProvider({ children }) {
-  const { user } = useAuth()
+  const { user, isAdmin } = useAuth()
   const [calendars, setCalendars] = useState([])
   const [activeCalendarId, setActiveCalendarIdState] = useState(() => localStorage.getItem(ACTIVE_KEY) || null)
   const [loading, setLoading] = useState(false)
@@ -14,8 +14,9 @@ export function CalendarProvider({ children }) {
 
   const activeCalendar = calendars.find((c) => c.id === activeCalendarId) || null
   const myRole = activeCalendar?.myRole || null
-  const canEdit = myRole === 'owner' || myRole === 'editor'
-  const canManage = myRole === 'owner'
+  // App administrators can manage any calendar they belong to.
+  const canEdit = isAdmin || myRole === 'owner' || myRole === 'editor'
+  const canManage = isAdmin || myRole === 'owner'
 
   const setActiveCalendarId = useCallback((id) => {
     setActiveCalendarIdState(id)

@@ -73,17 +73,24 @@ export function canChangeAnyUserRole(role) {
   return role === 'administrator'
 }
 
-export function canEditCalendar(membershipRole) {
+export function isAppAdmin(user) {
+  return user?.role === 'administrator'
+}
+
+export function canEditCalendar(membershipRole, user) {
+  if (isAppAdmin(user)) return true
   return membershipRole === 'owner' || membershipRole === 'editor'
 }
 
-export function canManageCalendar(membershipRole) {
+export function canManageCalendar(membershipRole, user) {
+  if (isAppAdmin(user)) return true
   return membershipRole === 'owner'
 }
 
 /**
  * Loads membership for calendarId from route params (preferred) or query/body.
  * If the user created the calendar but has no membership row, heal them as owner.
+ * App administrators who are members keep access even when their calendar role is not owner.
  */
 export function requireCalendarMember(req, res, next) {
   const run = async () => {
@@ -94,21 +101,28 @@ export function requireCalendarMember(req, res, next) {
       return res.status(400).json({ error: 'calendarId is required' })
     }
     let membership = await members.get(calendarId, req.user.id)
-    if (!membership) {
-      const calendar = await calendars.getById(calendarId)
-      if (calendar && calendar.createdByUserId === req.user.id) {
+    const calendar = await calendars.getById(calendarId)
+    if (calendar && calendar.createdByUserId === req.user.id) {
+      if (!membership) {
         membership = await members.add({
           calendarId,
           userId: req.user.id,
           role: 'owner',
         })
+      } else if (membership.role !== 'owner') {
+        // Repair calendars left with no owner (e.g. invite accept used to overwrite roles).
+        const owners = await members.countOwners(calendarId)
+        if (owners === 0) {
+          membership = await members.updateRole(calendarId, req.user.id, 'owner')
+        }
       }
     }
     if (!membership) {
       return res.status(403).json({ error: 'You are not a member of this calendar' })
     }
     req.calendarId = calendarId
-    req.membership = membership
+    // App admins act as calendar owners for permission checks without changing stored role.
+    req.membership = isAppAdmin(req.user) ? { ...membership, role: 'owner' } : membership
     next()
   }
   run().catch(next)
@@ -116,6 +130,7 @@ export function requireCalendarMember(req, res, next) {
 
 export function requireCalendarRole(...roles) {
   return (req, res, next) => {
+    if (isAppAdmin(req.user)) return next()
     if (!req.membership) {
       return res.status(403).json({ error: 'Calendar membership required' })
     }

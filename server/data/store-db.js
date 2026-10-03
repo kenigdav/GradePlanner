@@ -264,10 +264,12 @@ export const members = {
   },
   async add({ calendarId, userId, role }) {
     await ensureSchema()
+    // Never overwrite an existing role here — use updateRole for explicit changes.
+    // Prevents invite accept / join from demoting an owner.
     await getPool().query(
       `INSERT INTO calendar_members (calendar_id, user_id, role)
        VALUES ($1, $2, $3)
-       ON CONFLICT (calendar_id, user_id) DO UPDATE SET role = EXCLUDED.role`,
+       ON CONFLICT (calendar_id, user_id) DO NOTHING`,
       [calendarId, userId, role]
     )
     return this.get(calendarId, userId)

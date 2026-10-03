@@ -137,11 +137,9 @@ export const members = {
   add({ calendarId, userId, role }) {
     const all = members.getAll()
     const existing = all.find((m) => m.calendarId === calendarId && m.userId === userId)
-    if (existing) {
-      existing.role = role
-      writeJson(MEMBERS_FILE, all)
-      return existing
-    }
+    // Never overwrite an existing role here — use updateRole for explicit changes.
+    // Prevents invite accept / join from demoting an owner.
+    if (existing) return existing
     const row = { calendarId, userId, role }
     all.push(row)
     writeJson(MEMBERS_FILE, all)
