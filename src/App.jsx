@@ -146,6 +146,8 @@ export default function App() {
   const [subjects, setSubjects] = useState([])
   const assignmentsLoadedOnceRef = useRef(false)
   const showAddAssignment = canEdit && subjects.length > 0
+  const showAddSubjectsPrompt = canManage && subjects.length === 0
+  const showLeftPanel = showAddAssignment || showAddSubjectsPrompt
 
   useEffect(() => {
     if (!inviteToken) return
@@ -506,7 +508,7 @@ export default function App() {
           </aside>
         </>
       )}
-      <main className={`main ${!showAddAssignment ? 'main--calendar-only' : ''}`}>
+      <main className={`main ${!showLeftPanel ? 'main--calendar-only' : ''}`}>
         {showAddAssignment && (
           <section className="panel form-panel">
             <h2>Add assignment</h2>
@@ -515,6 +517,21 @@ export default function App() {
               suggestedDueDate={pickedDueDate}
               calendarId={activeCalendarId}
             />
+          </section>
+        )}
+        {showAddSubjectsPrompt && (
+          <section className="panel form-panel form-panel--subjects-prompt">
+            <h2>Add subjects</h2>
+            <p className="subjects-prompt-hint">
+              Add at least one subject before you can create assignments.
+            </p>
+            <button
+              type="button"
+              className="btn btn-primary subjects-prompt-btn"
+              onClick={() => setShowSubjectManagement(true)}
+            >
+              Add subjects
+            </button>
           </section>
         )}
         <section className="panel calendar-panel">
