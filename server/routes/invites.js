@@ -73,7 +73,8 @@ router.get('/pending', authMiddleware, requireApprovedUser, async (req, res, nex
       }
       const already = await membersStore.get(invite.calendarId, req.user.id)
       if (already) {
-        await invitesStore.update(invite.id, { status: 'accepted' })
+        // Still a member — hide the invite, but do NOT mark it accepted.
+        // Marking accepted here blocked re-join after leave.
         continue
       }
       const preview = await buildInvitePreview(invite)

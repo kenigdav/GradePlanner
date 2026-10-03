@@ -71,14 +71,19 @@ export function CalendarPicker() {
     setJoinSuccess('')
     try {
       const calendar = await calendarsApi.joinWithCode(code)
-      await refreshCalendars()
+      const list = await refreshCalendars()
       setJoinCode('')
       setJoinSuccess(
         calendar.alreadyMember
           ? `You're already in ${calendar.name}.`
           : `Joined ${calendar.name}.`
       )
-      if (calendar.id) setActiveCalendarId(calendar.id)
+      // Select only after the refreshed list includes this calendar.
+      if (calendar.id && list.some((c) => c.id === calendar.id)) {
+        setActiveCalendarId(calendar.id)
+      } else if (calendar.id) {
+        setJoinError('Joined, but the calendar list did not update. Refresh the page.')
+      }
     } catch (err) {
       setJoinError(err.message || 'Failed to join with that code')
     } finally {
@@ -91,9 +96,12 @@ export function CalendarPicker() {
     setInviteError('')
     try {
       const result = await invitesApi.accept(invite.token)
-      await refreshCalendars()
+      const list = await refreshCalendars()
       await loadPending()
-      if (result.calendar?.id) setActiveCalendarId(result.calendar.id)
+      const id = result.calendar?.id
+      if (id && list.some((c) => c.id === id)) {
+        setActiveCalendarId(id)
+      }
     } catch (err) {
       setInviteError(err.message || 'Failed to join calendar')
     } finally {

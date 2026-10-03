@@ -84,35 +84,31 @@ function appBaseUrl(req) {
 router.get('/', authMiddleware, requireApprovedUser, async (req, res, next) => {
   try {
     const list = await calendarsStore.getForUser(req.user.id)
-    // Heal: calendars you created but aren't a member of yet (legacy / failed writes)
+    // Heal only orphaned calendars (created but never got a membership row).
+    // Do NOT re-add creators who left intentionally while other members remain.
     const all = await calendarsStore.getAll()
     const knownIds = new Set(list.map((c) => c.id))
     for (const c of all) {
       if (c.createdByUserId === req.user.id && !knownIds.has(c.id)) {
-        await membersStore.add({
-          calendarId: c.id,
-          userId: req.user.id,
-          role: 'owner',
-        })
-        list.push(c)
-        knownIds.add(c.id)
+        const rows = await membersStore.getByCalendar(c.id)
+        if (rows.length === 0) {
+          await membersStore.add({
+            calendarId: c.id,
+            userId: req.user.id,
+            role: 'owner',
+          })
+          list.push(c)
+          knownIds.add(c.id)
+        }
       }
     }
     const withRole = await Promise.all(
       list.map(async (c) => {
         let membership = await membersStore.get(c.id, req.user.id)
-        if (c.createdByUserId === req.user.id) {
-          if (!membership) {
-            membership = await membersStore.add({
-              calendarId: c.id,
-              userId: req.user.id,
-              role: 'owner',
-            })
-          } else if (membership.role !== 'owner') {
-            const owners = await membersStore.countOwners(c.id)
-            if (owners === 0) {
-              membership = await membersStore.updateRole(c.id, req.user.id, 'owner')
-            }
+        if (membership && c.createdByUserId === req.user.id && membership.role !== 'owner') {
+          const owners = await membersStore.countOwners(c.id)
+          if (owners === 0) {
+            membership = await membersStore.updateRole(c.id, req.user.id, 'owner')
           }
         }
         const withCode = await ensureJoinCode(c)
@@ -356,6 +352,34 @@ router.delete(
         }
       }
       await membersStore.remove(req.calendarId, userId)
+
+      // If they had an invite that was closed while they were a member, reopen it
+      // so leave → rejoin via invite works again.
+      try {
+        const removedUser = await usersStore.getById(userId)
+        if (removedUser) {
+          const allInvites = await invitesStore.getByCalendar(req.calendarId)
+          for (const inv of allInvites) {
+            if (inv.status !== 'accepted') continue
+            const emailMatch =
+              inv.email &&
+              removedUser.email &&
+              inv.email.toLowerCase() === removedUser.email.toLowerCase()
+            const usernameMatch =
+              inv.invitedUsername &&
+              removedUser.username &&
+              inv.invitedUsername.toLowerCase() === removedUser.username.toLowerCase()
+            if (emailMatch || usernameMatch) {
+              const expired = inv.expiresAt && new Date(inv.expiresAt).getTime() < Date.now()
+              await invitesStore.update(inv.id, { status: expired ? 'revoked' : 'pending' })
+            }
+          }
+        }
+      } catch {
+        /* invite reopen is best-effort */
+      }
+
+      sse.broadcast('calendars.changed', { calendarId: req.calendarId })
       res.status(204).send()
     } catch (err) {
       next(err)

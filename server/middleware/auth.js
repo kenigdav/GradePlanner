@@ -104,11 +104,15 @@ export function requireCalendarMember(req, res, next) {
     const calendar = await calendars.getById(calendarId)
     if (calendar && calendar.createdByUserId === req.user.id) {
       if (!membership) {
-        membership = await members.add({
-          calendarId,
-          userId: req.user.id,
-          role: 'owner',
-        })
+        // Only heal orphaned calendars (no members). Never undo a voluntary leave.
+        const rows = await members.getByCalendar(calendarId)
+        if (rows.length === 0) {
+          membership = await members.add({
+            calendarId,
+            userId: req.user.id,
+            role: 'owner',
+          })
+        }
       } else if (membership.role !== 'owner') {
         // Repair calendars left with no owner (e.g. invite accept used to overwrite roles).
         const owners = await members.countOwners(calendarId)

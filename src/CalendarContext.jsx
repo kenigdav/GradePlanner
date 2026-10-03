@@ -67,14 +67,12 @@ export function CalendarProvider({ children }) {
     refreshCalendars()
   }, [user, refreshCalendars])
 
-  // Drop stale selection when the active id isn't in the user's calendar list
+  // Drop stale selection when the active id isn't in the user's calendar list.
+  // While loading, keep the current selection so a join/leave refresh cannot
+  // briefly clear the id and show "not a member" on in-flight requests.
   useEffect(() => {
     if (!activeCalendarId) return
     if (loading) return
-    if (calendars.length === 0) {
-      setActiveCalendarId(null)
-      return
-    }
     if (!calendars.some((c) => c.id === activeCalendarId)) {
       setActiveCalendarId(null)
     }

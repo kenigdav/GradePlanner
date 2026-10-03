@@ -22,12 +22,16 @@ async function loadMembership(req, res) {
   let membership = await membersStore.get(calendarId, req.user.id)
   if (!membership) {
     const calendar = await calendarsStore.getById(calendarId)
+    // Only heal orphaned calendars; do not undo a voluntary leave.
     if (calendar && calendar.createdByUserId === req.user.id) {
-      membership = await membersStore.add({
-        calendarId,
-        userId: req.user.id,
-        role: 'owner',
-      })
+      const rows = await membersStore.getByCalendar(calendarId)
+      if (rows.length === 0) {
+        membership = await membersStore.add({
+          calendarId,
+          userId: req.user.id,
+          role: 'owner',
+        })
+      }
     }
   }
   if (!membership) {
