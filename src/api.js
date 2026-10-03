@@ -120,6 +120,14 @@ export const calendarsApi = {
     const res = await fetch(`${API_BASE}/calendars/${calendarId}/members`, { headers: getHeaders() })
     return handleRes(res)
   },
+  async addMember(calendarId, username, role) {
+    const res = await fetch(`${API_BASE}/calendars/${calendarId}/members`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ username, role }),
+    })
+    return handleRes(res)
+  },
   async updateMemberRole(calendarId, userId, role) {
     const res = await fetch(`${API_BASE}/calendars/${calendarId}/members/${userId}`, {
       method: 'PATCH',

@@ -90,7 +90,7 @@ export function CalendarPicker() {
     <div className="calendar-picker">
       <h1>Your calendars</h1>
       <p className="calendar-picker-hint">
-        Create a calendar for a class or group, then invite people by username or email.
+        Create a calendar for a class or group, then add people by their username.
       </p>
 
       {(pendingInvites.length > 0 || invitesLoading) && (

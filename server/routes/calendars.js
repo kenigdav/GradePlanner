@@ -150,6 +150,69 @@ router.get('/:id/members', authMiddleware, requireApprovedUser, requireCalendarM
   }
 })
 
+/** Add an existing user to this calendar by username (no email needed). */
+router.post(
+  '/:id/members',
+  authMiddleware,
+  requireApprovedUser,
+  requireCalendarMember,
+  requireCalendarRole('owner'),
+  async (req, res, next) => {
+    try {
+      const username = (req.body?.username != null && String(req.body.username).trim()) || ''
+      const role = req.body?.role || 'viewer'
+      if (!username) {
+        return res.status(400).json({ error: 'Username is required' })
+      }
+      if (!CALENDAR_ROLES.includes(role)) {
+        return res.status(400).json({ error: 'Role must be owner, editor, or viewer' })
+      }
+
+      const target = await usersStore.getByUsername(username)
+      if (!target) {
+        return res.status(404).json({ error: 'No user found with that username' })
+      }
+      if (target.banned) {
+        return res.status(400).json({ error: 'That user cannot be added' })
+      }
+      if (target.role === 'pending') {
+        return res.status(400).json({ error: 'That account is still pending approval' })
+      }
+
+      const already = await membersStore.get(req.calendarId, target.id)
+      if (already) {
+        return res.status(409).json({ error: 'That user is already a member of this calendar' })
+      }
+
+      const membership = await membersStore.add({
+        calendarId: req.calendarId,
+        userId: target.id,
+        role,
+      })
+
+      // Clear any pending invites for this user on this calendar
+      const pending = (await invitesStore.getByCalendar(req.calendarId)).filter((i) => {
+        if (i.status !== 'pending') return false
+        const byUsername =
+          i.invitedUsername && i.invitedUsername.toLowerCase() === target.username.toLowerCase()
+        const byEmail = i.email && target.email && i.email.toLowerCase() === target.email.toLowerCase()
+        return byUsername || byEmail
+      })
+      for (const old of pending) {
+        await invitesStore.update(old.id, { status: 'accepted' })
+      }
+
+      res.status(201).json({
+        userId: membership.userId,
+        role: membership.role,
+        user: publicUser(target),
+      })
+    } catch (err) {
+      next(err)
+    }
+  }
+)
+
 router.patch(
   '/:id/members/:userId',
   authMiddleware,

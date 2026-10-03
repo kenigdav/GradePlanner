@@ -136,6 +136,11 @@
   margin: 0 0 0.75rem;
 }
 
+.calendar-members-success {
+  color: #4ade80;
+  margin: 0 0 0.75rem;
+}
+
 .calendar-members-loading {
   opacity: 0.75;
 }

@@ -5,7 +5,7 @@ import { useCalendar } from './CalendarContext'
 import './CalendarMembers.css'
 
 const ROLE_OPTIONS = ['owner', 'editor', 'viewer']
-const INVITE_ROLES = ['editor', 'viewer']
+const ADD_ROLES = ['editor', 'viewer']
 
 export function CalendarMembers({ onClose }) {
   const { user } = useAuth()
@@ -14,10 +14,9 @@ export function CalendarMembers({ onClose }) {
   const [invites, setInvites] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [inviteMode, setInviteMode] = useState('username')
-  const [inviteValue, setInviteValue] = useState('')
-  const [inviteRole, setInviteRole] = useState('viewer')
-  const [inviteResult, setInviteResult] = useState(null)
+  const [username, setUsername] = useState('')
+  const [addRole, setAddRole] = useState('viewer')
+  const [success, setSuccess] = useState('')
   const [busy, setBusy] = useState(false)
 
   const calendarId = activeCalendar?.id
@@ -46,23 +45,21 @@ export function CalendarMembers({ onClose }) {
     load()
   }, [calendarId, canManage])
 
-  const handleInvite = async (e) => {
+  const handleAdd = async (e) => {
     e.preventDefault()
-    if (!calendarId || !inviteValue.trim()) return
+    if (!calendarId || !username.trim()) return
     setBusy(true)
     setError('')
-    setInviteResult(null)
+    setSuccess('')
     try {
-      const payload =
-        inviteMode === 'username'
-          ? { username: inviteValue.trim(), role: inviteRole }
-          : { email: inviteValue.trim(), role: inviteRole }
-      const result = await calendarsApi.createInvite(calendarId, payload)
-      setInviteResult(result)
-      setInviteValue('')
+      const added = await calendarsApi.addMember(calendarId, username.trim(), addRole)
+      const label = added.user?.username || username.trim()
+      setSuccess(`Added @${label} as ${addRole}.`)
+      setUsername('')
       await load()
+      await refreshCalendars()
     } catch (err) {
-      setError(err.message || 'Failed to send invite')
+      setError(err.message || 'Failed to add member')
     } finally {
       setBusy(false)
     }
@@ -71,6 +68,7 @@ export function CalendarMembers({ onClose }) {
   const handleRoleChange = async (userId, role) => {
     setBusy(true)
     setError('')
+    setSuccess('')
     try {
       await calendarsApi.updateMemberRole(calendarId, userId, role)
       await load()
@@ -85,6 +83,7 @@ export function CalendarMembers({ onClose }) {
   const handleRemove = async (userId) => {
     setBusy(true)
     setError('')
+    setSuccess('')
     try {
       await calendarsApi.removeMember(calendarId, userId)
       if (userId === user.id) {
@@ -114,15 +113,6 @@ export function CalendarMembers({ onClose }) {
     }
   }
 
-  const copyLink = async (url) => {
-    try {
-      await navigator.clipboard.writeText(url)
-      setInviteResult((prev) => (prev ? { ...prev, copied: true } : prev))
-    } catch {
-      /* ignore */
-    }
-  }
-
   const inviteLabel = (inv) => {
     if (inv.invitedUsername) return `@${inv.invitedUsername}`
     return inv.email || 'Unknown'
@@ -136,6 +126,7 @@ export function CalendarMembers({ onClose }) {
       </div>
 
       {error && <p className="calendar-members-error">{error}</p>}
+      {success && <p className="calendar-members-success">{success}</p>}
       {loading ? (
         <p className="calendar-members-loading">Loading...</p>
       ) : (
@@ -144,9 +135,7 @@ export function CalendarMembers({ onClose }) {
             <li key={m.userId} className="calendar-members-row">
               <div className="calendar-members-info">
                 <span className="calendar-members-name">{m.user?.fullName || m.user?.username || 'Unknown'}</span>
-                <span className="calendar-members-email">
-                  @{m.user?.username}{m.user?.email ? ` · ${m.user.email}` : ''}
-                </span>
+                <span className="calendar-members-email">@{m.user?.username}</span>
               </div>
               {canManage ? (
                 <select
@@ -179,72 +168,32 @@ export function CalendarMembers({ onClose }) {
 
       {canManage && (
         <>
-          <form className="calendar-members-invite" onSubmit={handleInvite}>
-            <h3>Invite someone</h3>
-            <div className="calendar-members-mode">
-              <button
-                type="button"
-                className={`btn btn-sm ${inviteMode === 'username' ? 'btn-primary' : 'btn-ghost'}`}
-                onClick={() => { setInviteMode('username'); setInviteValue(''); setInviteResult(null) }}
-              >
-                Username
-              </button>
-              <button
-                type="button"
-                className={`btn btn-sm ${inviteMode === 'email' ? 'btn-primary' : 'btn-ghost'}`}
-                onClick={() => { setInviteMode('email'); setInviteValue(''); setInviteResult(null) }}
-              >
-                Email
-              </button>
-            </div>
+          <form className="calendar-members-invite" onSubmit={handleAdd}>
+            <h3>Add by username</h3>
             <div className="calendar-members-invite-row">
               <input
-                type={inviteMode === 'email' ? 'email' : 'text'}
-                value={inviteValue}
-                onChange={(e) => setInviteValue(e.target.value)}
-                placeholder={inviteMode === 'email' ? 'email@example.com' : 'username'}
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="username"
                 required
                 disabled={busy}
-                autoComplete={inviteMode === 'email' ? 'email' : 'username'}
+                autoComplete="username"
+                aria-label="Username"
               />
-              <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)} disabled={busy}>
-                {INVITE_ROLES.map((r) => (
+              <select value={addRole} onChange={(e) => setAddRole(e.target.value)} disabled={busy}>
+                {ADD_ROLES.map((r) => (
                   <option key={r} value={r}>{r}</option>
                 ))}
               </select>
-              <button type="submit" className="btn btn-primary" disabled={busy || !inviteValue.trim()}>
-                Invite
+              <button type="submit" className="btn btn-primary" disabled={busy || !username.trim()}>
+                Add
               </button>
             </div>
             <p className="calendar-members-invite-hint">
-              {inviteMode === 'username'
-                ? 'They’ll see a join preview on their home screen after signing in.'
-                : 'They’ll get an invite link by email (if email is configured).'}
+              Enter their account username. They’ll get access to this calendar right away.
             </p>
           </form>
-
-          {inviteResult && (
-            <div className="calendar-members-invite-result">
-              {inviteResult.inviteVia === 'username' || inviteResult.invitedUsername ? (
-                <p>{inviteResult.message || `Invite sent to @${inviteResult.invitedUsername}.`}</p>
-              ) : inviteResult.emailSent ? (
-                <p>Invite email sent to {inviteResult.email}.</p>
-              ) : (
-                <p>
-                  Invite created{inviteResult.emailError ? ` (email not sent: ${inviteResult.emailError})` : ' (email not configured)'}.
-                  {inviteResult.inviteUrl ? ' Share this link:' : ''}
-                </p>
-              )}
-              {inviteResult.inviteUrl && (
-                <div className="calendar-members-link-row">
-                  <code>{inviteResult.inviteUrl}</code>
-                  <button type="button" className="btn btn-sm btn-ghost" onClick={() => copyLink(inviteResult.inviteUrl)}>
-                    {inviteResult.copied ? 'Copied' : 'Copy'}
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
 
           {invites.length > 0 && (
             <div className="calendar-members-pending">
