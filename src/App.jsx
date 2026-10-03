@@ -378,7 +378,7 @@ export default function App() {
     )
   }
 
-  if (!activeCalendarId) {
+  if (!activeCalendar) {
     return (
       <div className="app app--auth">
         <ThemeToggle theme={theme} onToggle={toggleTheme} className="theme-toggle--auth" />

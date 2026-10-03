@@ -9,7 +9,7 @@ const ADD_ROLES = ['owner', 'editor', 'viewer']
 
 export function CalendarMembers({ onClose }) {
   const { user } = useAuth()
-  const { activeCalendar, canManage, refreshCalendars, setActiveCalendarId } = useCalendar()
+  const { activeCalendar, activeCalendarId, canManage, refreshCalendars, setActiveCalendarId } = useCalendar()
   const [members, setMembers] = useState([])
   const [invites, setInvites] = useState([])
   const [loading, setLoading] = useState(true)
@@ -19,7 +19,7 @@ export function CalendarMembers({ onClose }) {
   const [success, setSuccess] = useState('')
   const [busy, setBusy] = useState(false)
 
-  const calendarId = activeCalendar?.id
+  const calendarId = activeCalendar?.id || activeCalendarId
 
   const load = async () => {
     if (!calendarId) return

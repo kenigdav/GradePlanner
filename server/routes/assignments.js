@@ -1,5 +1,9 @@
 import { Router } from 'express'
-import { assignments as assignmentsStore, members as membersStore } from '../data/store.js'
+import {
+  assignments as assignmentsStore,
+  members as membersStore,
+  calendars as calendarsStore,
+} from '../data/store.js'
 import {
   authMiddleware,
   requireApprovedUser,
@@ -15,7 +19,17 @@ async function loadMembership(req, res) {
     res.status(400).json({ error: 'calendarId is required' })
     return null
   }
-  const membership = await membersStore.get(calendarId, req.user.id)
+  let membership = await membersStore.get(calendarId, req.user.id)
+  if (!membership) {
+    const calendar = await calendarsStore.getById(calendarId)
+    if (calendar && calendar.createdByUserId === req.user.id) {
+      membership = await membersStore.add({
+        calendarId,
+        userId: req.user.id,
+        role: 'owner',
+      })
+    }
+  }
   if (!membership) {
     res.status(403).json({ error: 'You are not a member of this calendar' })
     return null

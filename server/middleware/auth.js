@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken'
-import { users, members } from '../data/store.js'
+import { users, members, calendars } from '../data/store.js'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'grade-planner-secret-change-in-production'
 
@@ -82,16 +82,28 @@ export function canManageCalendar(membershipRole) {
 }
 
 /**
- * Loads membership for calendarId from params/query/body into req.membership.
+ * Loads membership for calendarId from route params (preferred) or query/body.
+ * If the user created the calendar but has no membership row, heal them as owner.
  */
 export function requireCalendarMember(req, res, next) {
   const run = async () => {
-    const calendarId =
-      req.params.calendarId || req.params.id || req.query.calendarId || req.body?.calendarId
+    // Prefer path param :id / :calendarId. Do not use body.calendarId for POST
+    // /members (body is { username, role }) so we never resolve the wrong id.
+    const calendarId = req.params.calendarId || req.params.id || req.query.calendarId
     if (!calendarId) {
       return res.status(400).json({ error: 'calendarId is required' })
     }
-    const membership = await members.get(calendarId, req.user.id)
+    let membership = await members.get(calendarId, req.user.id)
+    if (!membership) {
+      const calendar = await calendars.getById(calendarId)
+      if (calendar && calendar.createdByUserId === req.user.id) {
+        membership = await members.add({
+          calendarId,
+          userId: req.user.id,
+          role: 'owner',
+        })
+      }
+    }
     if (!membership) {
       return res.status(403).json({ error: 'You are not a member of this calendar' })
     }

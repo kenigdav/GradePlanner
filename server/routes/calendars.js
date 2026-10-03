@@ -62,9 +62,30 @@ function appBaseUrl(req) {
 router.get('/', authMiddleware, requireApprovedUser, async (req, res, next) => {
   try {
     const list = await calendarsStore.getForUser(req.user.id)
+    // Heal: calendars you created but aren't a member of yet (legacy / failed writes)
+    const all = await calendarsStore.getAll()
+    const knownIds = new Set(list.map((c) => c.id))
+    for (const c of all) {
+      if (c.createdByUserId === req.user.id && !knownIds.has(c.id)) {
+        await membersStore.add({
+          calendarId: c.id,
+          userId: req.user.id,
+          role: 'owner',
+        })
+        list.push(c)
+        knownIds.add(c.id)
+      }
+    }
     const withRole = await Promise.all(
       list.map(async (c) => {
-        const membership = await membersStore.get(c.id, req.user.id)
+        let membership = await membersStore.get(c.id, req.user.id)
+        if (!membership && c.createdByUserId === req.user.id) {
+          membership = await membersStore.add({
+            calendarId: c.id,
+            userId: req.user.id,
+            role: 'owner',
+          })
+        }
         return { ...c, myRole: membership?.role || null }
       })
     )
