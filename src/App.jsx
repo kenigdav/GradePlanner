@@ -11,7 +11,7 @@ import { ChangePassword } from './ChangePassword'
 import { CalendarPicker } from './CalendarPicker'
 import { CalendarMembers } from './CalendarMembers'
 import { InviteAccept, clearInviteFromUrl, readInviteToken } from './InviteAccept'
-import { assignmentsApi, notifyApi, calendarsApi, invitesApi } from './api'
+import { assignmentsApi, notifyApi, calendarsApi, invitesApi, subjectsApi } from './api'
 import { useRealtimeSync } from './useRealtimeSync'
 import './App.css'
 
@@ -143,7 +143,9 @@ export default function App() {
   const [calendarUpdatedToast, setCalendarUpdatedToast] = useState(false)
   const [renameValue, setRenameValue] = useState('')
   const [showRename, setShowRename] = useState(false)
+  const [subjects, setSubjects] = useState([])
   const assignmentsLoadedOnceRef = useRef(false)
+  const showAddAssignment = canEdit && subjects.length > 0
 
   useEffect(() => {
     if (!inviteToken) return
@@ -201,6 +203,29 @@ export default function App() {
 
   useEffect(() => {
     loadAssignments()
+  }, [user, activeCalendarId])
+
+  const loadSubjects = async () => {
+    if (!user || !activeCalendarId) {
+      setSubjects([])
+      return
+    }
+    try {
+      const list = await subjectsApi.list(activeCalendarId)
+      setSubjects(list)
+    } catch {
+      setSubjects([])
+    }
+  }
+
+  useEffect(() => {
+    loadSubjects()
+  }, [user, activeCalendarId])
+
+  useEffect(() => {
+    const onSubjectsChanged = () => loadSubjects()
+    window.addEventListener('grade-planner-subjects-changed', onSubjectsChanged)
+    return () => window.removeEventListener('grade-planner-subjects-changed', onSubjectsChanged)
   }, [user, activeCalendarId])
 
   useRealtimeSync({
@@ -481,8 +506,8 @@ export default function App() {
           </aside>
         </>
       )}
-      <main className={`main ${!canEdit ? 'main--calendar-only' : ''}`}>
-        {canEdit && (
+      <main className={`main ${!showAddAssignment ? 'main--calendar-only' : ''}`}>
+        {showAddAssignment && (
           <section className="panel form-panel">
             <h2>Add assignment</h2>
             <AssignmentForm
