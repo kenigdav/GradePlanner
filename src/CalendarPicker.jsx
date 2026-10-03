@@ -99,25 +99,25 @@ function InviteTile({ invite, busy, onAccept, onDecline }) {
             <p className="invite-tile-upcoming-empty">No upcoming assignments</p>
           )}
         </div>
+      </div>
 
-        <div className="invite-tile-actions">
-          <button
-            type="button"
-            className="btn btn-primary"
-            disabled={busy}
-            onClick={onAccept}
-          >
-            {busy ? 'Joining…' : 'Accept'}
-          </button>
-          <button
-            type="button"
-            className="btn btn-ghost"
-            disabled={busy}
-            onClick={onDecline}
-          >
-            Decline
-          </button>
-        </div>
+      <div className="invite-tile-actions">
+        <button
+          type="button"
+          className="btn btn-primary"
+          disabled={busy}
+          onClick={onAccept}
+        >
+          {busy ? 'Joining…' : 'Accept'}
+        </button>
+        <button
+          type="button"
+          className="btn btn-ghost"
+          disabled={busy}
+          onClick={onDecline}
+        >
+          Decline
+        </button>
       </div>
     </li>
   )
