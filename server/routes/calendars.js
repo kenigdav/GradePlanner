@@ -159,7 +159,8 @@ router.post(
   requireCalendarRole('owner'),
   async (req, res, next) => {
     try {
-      const username = (req.body?.username != null && String(req.body.username).trim()) || ''
+      const username =
+        (req.body?.username != null && String(req.body.username).trim().replace(/^@+/, '')) || ''
       const role = req.body?.role || 'viewer'
       if (!username) {
         return res.status(400).json({ error: 'Username is required' })

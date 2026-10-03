@@ -1,23 +1,57 @@
 const API_BASE = '/api'
 
+const TOKEN_KEY = 'grade-planner-token'
+
+let onAuthFailure = null
+
+/** Register a callback for 401 responses (e.g. clear session and show login). */
+export function setAuthFailureHandler(handler) {
+  onAuthFailure = handler
+}
+
 function getToken() {
-  return localStorage.getItem('grade-planner-token')
+  return localStorage.getItem(TOKEN_KEY)
 }
 
 function getHeaders(includeAuth = true) {
   const headers = { 'Content-Type': 'application/json' }
-  const token = getToken()
-  if (includeAuth && token) headers.Authorization = `Bearer ${token}`
+  if (includeAuth) {
+    const token = getToken()
+    if (token) headers.Authorization = `Bearer ${token}`
+  }
   return headers
 }
 
-async function handleRes(res) {
+async function handleRes(res, { requireAuth = false } = {}) {
+  if (res.status === 401) {
+    onAuthFailure?.()
+  }
   const data = await res.json().catch(() => ({}))
   if (!res.ok) {
-    const msg = data.error || (res.status === 500 ? 'Server error. Check the server terminal for details.' : res.statusText)
+    let msg = data.error || (res.status === 500 ? 'Server error. Check the server terminal for details.' : res.statusText)
+    if (res.status === 401) {
+      msg = data.error === 'Authentication required'
+        ? 'Please sign in again, then retry.'
+        : (data.error || 'Please sign in again, then retry.')
+    }
     throw new Error(msg)
   }
   return data
+}
+
+async function authFetch(url, options = {}) {
+  const token = getToken()
+  if (!token) {
+    onAuthFailure?.()
+    throw new Error('Please sign in again, then retry.')
+  }
+  const headers = {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${token}`,
+    ...(options.headers || {}),
+  }
+  const res = await fetch(url, { ...options, headers })
+  return handleRes(res, { requireAuth: true })
 }
 
 export const authApi = {
@@ -38,129 +72,130 @@ export const authApi = {
     return handleRes(res)
   },
   async changePassword(currentPassword, newPassword) {
-    const res = await fetch(`${API_BASE}/auth/change-password`, {
+    return authFetch(`${API_BASE}/auth/change-password`, {
       method: 'POST',
-      headers: getHeaders(),
       body: JSON.stringify({ currentPassword, newPassword }),
     })
-    return handleRes(res)
   },
 }
 
 export const usersApi = {
   async list() {
-    const res = await fetch(`${API_BASE}/users`, { headers: getHeaders() })
-    return handleRes(res)
+    return authFetch(`${API_BASE}/users`)
   },
   async updateRole(userId, role) {
-    const res = await fetch(`${API_BASE}/users/${userId}/role`, {
+    return authFetch(`${API_BASE}/users/${userId}/role`, {
       method: 'PATCH',
-      headers: getHeaders(),
       body: JSON.stringify({ role }),
     })
-    return handleRes(res)
   },
   async updateBan(userId, banned) {
-    const res = await fetch(`${API_BASE}/users/${userId}`, {
+    return authFetch(`${API_BASE}/users/${userId}`, {
       method: 'PATCH',
-      headers: getHeaders(),
       body: JSON.stringify({ banned }),
     })
-    return handleRes(res)
   },
   async delete(userId) {
+    const token = getToken()
+    if (!token) {
+      onAuthFailure?.()
+      throw new Error('Please sign in again, then retry.')
+    }
     const res = await fetch(`${API_BASE}/users/${userId}`, {
       method: 'DELETE',
-      headers: getHeaders(),
+      headers: { Authorization: `Bearer ${token}` },
     })
+    if (res.status === 401) onAuthFailure?.()
     if (res.status === 204) return
-    const data = await res.json().catch(() => ({}))
-    if (!res.ok) throw new Error(data.error || res.statusText)
+    return handleRes(res)
   },
   async create(fullName, email, username, password, role) {
-    const res = await fetch(`${API_BASE}/users`, {
+    return authFetch(`${API_BASE}/users`, {
       method: 'POST',
-      headers: getHeaders(),
       body: JSON.stringify({ fullName, email, username, password, role }),
     })
-    return handleRes(res)
   },
 }
 
 export const calendarsApi = {
   async list() {
-    const res = await fetch(`${API_BASE}/calendars`, { headers: getHeaders() })
-    return handleRes(res)
+    return authFetch(`${API_BASE}/calendars`)
   },
   async create(name) {
-    const res = await fetch(`${API_BASE}/calendars`, {
+    return authFetch(`${API_BASE}/calendars`, {
       method: 'POST',
-      headers: getHeaders(),
       body: JSON.stringify({ name }),
     })
-    return handleRes(res)
   },
   async update(id, name) {
-    const res = await fetch(`${API_BASE}/calendars/${id}`, {
+    return authFetch(`${API_BASE}/calendars/${id}`, {
       method: 'PATCH',
-      headers: getHeaders(),
       body: JSON.stringify({ name }),
     })
-    return handleRes(res)
   },
   async delete(id) {
+    const token = getToken()
+    if (!token) {
+      onAuthFailure?.()
+      throw new Error('Please sign in again, then retry.')
+    }
     const res = await fetch(`${API_BASE}/calendars/${id}`, {
       method: 'DELETE',
-      headers: getHeaders(),
+      headers: { Authorization: `Bearer ${token}` },
     })
+    if (res.status === 401) onAuthFailure?.()
     if (res.status === 204) return
     return handleRes(res)
   },
   async listMembers(calendarId) {
-    const res = await fetch(`${API_BASE}/calendars/${calendarId}/members`, { headers: getHeaders() })
-    return handleRes(res)
+    return authFetch(`${API_BASE}/calendars/${calendarId}/members`)
   },
   async addMember(calendarId, username, role) {
-    const res = await fetch(`${API_BASE}/calendars/${calendarId}/members`, {
+    return authFetch(`${API_BASE}/calendars/${calendarId}/members`, {
       method: 'POST',
-      headers: getHeaders(),
       body: JSON.stringify({ username, role }),
     })
-    return handleRes(res)
   },
   async updateMemberRole(calendarId, userId, role) {
-    const res = await fetch(`${API_BASE}/calendars/${calendarId}/members/${userId}`, {
+    return authFetch(`${API_BASE}/calendars/${calendarId}/members/${userId}`, {
       method: 'PATCH',
-      headers: getHeaders(),
       body: JSON.stringify({ role }),
     })
-    return handleRes(res)
   },
   async removeMember(calendarId, userId) {
+    const token = getToken()
+    if (!token) {
+      onAuthFailure?.()
+      throw new Error('Please sign in again, then retry.')
+    }
     const res = await fetch(`${API_BASE}/calendars/${calendarId}/members/${userId}`, {
       method: 'DELETE',
-      headers: getHeaders(),
+      headers: { Authorization: `Bearer ${token}` },
     })
+    if (res.status === 401) onAuthFailure?.()
     if (res.status === 204) return
     return handleRes(res)
   },
   async listInvites(calendarId) {
-    const res = await fetch(`${API_BASE}/calendars/${calendarId}/invites`, { headers: getHeaders() })
-    return handleRes(res)
+    return authFetch(`${API_BASE}/calendars/${calendarId}/invites`)
   },
   async createInvite(calendarId, { email, username, role }) {
-    const res = await fetch(`${API_BASE}/calendars/${calendarId}/invites`, {
+    return authFetch(`${API_BASE}/calendars/${calendarId}/invites`, {
       method: 'POST',
-      headers: getHeaders(),
       body: JSON.stringify({ email, username, role }),
     })
-    return handleRes(res)
   },
   async revokeInvite(calendarId, inviteId) {
+    const token = getToken()
+    if (!token) {
+      onAuthFailure?.()
+      throw new Error('Please sign in again, then retry.')
+    }
     const res = await fetch(`${API_BASE}/calendars/${calendarId}/invites/${inviteId}`, {
       method: 'DELETE',
-      headers: getHeaders(),
+      headers: { Authorization: `Bearer ${token}` },
     })
+    if (res.status === 401) onAuthFailure?.()
     if (res.status === 204) return
     return handleRes(res)
   },
@@ -168,8 +203,7 @@ export const calendarsApi = {
 
 export const invitesApi = {
   async listPending() {
-    const res = await fetch(`${API_BASE}/invites/pending`, { headers: getHeaders() })
-    return handleRes(res)
+    return authFetch(`${API_BASE}/invites/pending`)
   },
   async preview(token) {
     const res = await fetch(`${API_BASE}/invites/${encodeURIComponent(token)}`, {
@@ -178,87 +212,73 @@ export const invitesApi = {
     return handleRes(res)
   },
   async accept(token) {
-    const res = await fetch(`${API_BASE}/invites/accept`, {
+    return authFetch(`${API_BASE}/invites/accept`, {
       method: 'POST',
-      headers: getHeaders(),
       body: JSON.stringify({ token }),
     })
-    return handleRes(res)
   },
   async decline(token) {
-    const res = await fetch(`${API_BASE}/invites/decline`, {
+    return authFetch(`${API_BASE}/invites/decline`, {
       method: 'POST',
-      headers: getHeaders(),
       body: JSON.stringify({ token }),
     })
-    return handleRes(res)
   },
 }
 
 export const subjectsApi = {
   async list(calendarId) {
-    const res = await fetch(`${API_BASE}/subjects?calendarId=${encodeURIComponent(calendarId)}`, {
-      headers: getHeaders(),
-    })
-    return handleRes(res)
+    return authFetch(`${API_BASE}/subjects?calendarId=${encodeURIComponent(calendarId)}`)
   },
   async add(subject, calendarId) {
-    const res = await fetch(`${API_BASE}/subjects`, {
+    return authFetch(`${API_BASE}/subjects`, {
       method: 'POST',
-      headers: getHeaders(),
       body: JSON.stringify({ subject, calendarId }),
     })
-    return handleRes(res)
   },
   async remove(subject, calendarId) {
-    const res = await fetch(`${API_BASE}/subjects`, {
+    return authFetch(`${API_BASE}/subjects`, {
       method: 'DELETE',
-      headers: getHeaders(),
       body: JSON.stringify({ subject, calendarId }),
     })
-    return handleRes(res)
   },
 }
 
 export const notifyApi = {
   async notifyDueTomorrow(calendarId) {
-    const res = await fetch(`${API_BASE}/notify/due-tomorrow`, {
+    return authFetch(`${API_BASE}/notify/due-tomorrow`, {
       method: 'POST',
-      headers: getHeaders(),
       body: JSON.stringify({ calendarId }),
     })
-    return handleRes(res)
   },
 }
 
 export const assignmentsApi = {
   async list(calendarId) {
-    const res = await fetch(`${API_BASE}/assignments?calendarId=${encodeURIComponent(calendarId)}`, {
-      headers: getHeaders(),
-    })
-    return handleRes(res)
+    return authFetch(`${API_BASE}/assignments?calendarId=${encodeURIComponent(calendarId)}`)
   },
   async create(assignment) {
-    const res = await fetch(`${API_BASE}/assignments`, {
+    return authFetch(`${API_BASE}/assignments`, {
       method: 'POST',
-      headers: getHeaders(),
       body: JSON.stringify(assignment),
     })
-    return handleRes(res)
   },
   async update(id, updates) {
-    const res = await fetch(`${API_BASE}/assignments/${id}`, {
+    return authFetch(`${API_BASE}/assignments/${id}`, {
       method: 'PATCH',
-      headers: getHeaders(),
       body: JSON.stringify(updates),
     })
-    return handleRes(res)
   },
   async delete(id) {
+    const token = getToken()
+    if (!token) {
+      onAuthFailure?.()
+      throw new Error('Please sign in again, then retry.')
+    }
     const res = await fetch(`${API_BASE}/assignments/${id}`, {
       method: 'DELETE',
-      headers: getHeaders(),
+      headers: { Authorization: `Bearer ${token}` },
     })
+    if (res.status === 401) onAuthFailure?.()
     if (res.status === 204) return
     return handleRes(res)
   },

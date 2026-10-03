@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
-import { authApi } from './api'
+import { authApi, setAuthFailureHandler } from './api'
 
 const AuthContext = createContext(null)
 
@@ -9,8 +9,14 @@ const USER_KEY = 'grade-planner-user'
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
     try {
+      const token = localStorage.getItem(TOKEN_KEY)
       const u = localStorage.getItem(USER_KEY)
-      return u ? JSON.parse(u) : null
+      if (!token || !u) {
+        localStorage.removeItem(TOKEN_KEY)
+        localStorage.removeItem(USER_KEY)
+        return null
+      }
+      return JSON.parse(u)
     } catch {
       return null
     }
@@ -19,12 +25,24 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const token = localStorage.getItem(TOKEN_KEY)
-    if (!token) {
+    const storedUser = localStorage.getItem(USER_KEY)
+    if (!token || !storedUser) {
+      localStorage.removeItem(TOKEN_KEY)
+      localStorage.removeItem(USER_KEY)
       setUser(null)
       setLoading(false)
       return
     }
     setLoading(false)
+  }, [])
+
+  useEffect(() => {
+    setAuthFailureHandler(() => {
+      localStorage.removeItem(TOKEN_KEY)
+      localStorage.removeItem(USER_KEY)
+      setUser(null)
+    })
+    return () => setAuthFailureHandler(null)
   }, [])
 
   const persistUser = (u) => {

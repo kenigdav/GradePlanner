@@ -5,7 +5,7 @@ import { useCalendar } from './CalendarContext'
 import './CalendarMembers.css'
 
 const ROLE_OPTIONS = ['owner', 'editor', 'viewer']
-const ADD_ROLES = ['editor', 'viewer']
+const ADD_ROLES = ['owner', 'editor', 'viewer']
 
 export function CalendarMembers({ onClose }) {
   const { user } = useAuth()
@@ -29,13 +29,18 @@ export function CalendarMembers({ onClose }) {
       const memberList = await calendarsApi.listMembers(calendarId)
       setMembers(memberList)
       if (canManage) {
-        const inviteList = await calendarsApi.listInvites(calendarId)
-        setInvites(inviteList)
+        try {
+          const inviteList = await calendarsApi.listInvites(calendarId)
+          setInvites(inviteList)
+        } catch {
+          setInvites([])
+        }
       } else {
         setInvites([])
       }
     } catch (err) {
       setError(err.message || 'Failed to load members')
+      setMembers([])
     } finally {
       setLoading(false)
     }
@@ -47,13 +52,15 @@ export function CalendarMembers({ onClose }) {
 
   const handleAdd = async (e) => {
     e.preventDefault()
-    if (!calendarId || !username.trim()) return
+    if (!calendarId) return
+    const cleaned = username.trim().replace(/^@+/, '')
+    if (!cleaned) return
     setBusy(true)
     setError('')
     setSuccess('')
     try {
-      const added = await calendarsApi.addMember(calendarId, username.trim(), addRole)
-      const label = added.user?.username || username.trim()
+      const added = await calendarsApi.addMember(calendarId, cleaned, addRole)
+      const label = added.user?.username || cleaned
       setSuccess(`Added @${label} as ${addRole}.`)
       setUsername('')
       await load()
@@ -191,7 +198,8 @@ export function CalendarMembers({ onClose }) {
               </button>
             </div>
             <p className="calendar-members-invite-hint">
-              Enter their account username. They’ll get access to this calendar right away.
+              Enter their exact account username (no email). They get access right away.
+              Use role <strong>owner</strong> if you want them to administer this calendar.
             </p>
           </form>
 
