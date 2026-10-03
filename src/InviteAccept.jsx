@@ -85,8 +85,14 @@ export function InviteAccept({ onNeedAuth }) {
         <>
           <h2>Calendar invite</h2>
           <p>
-            You&apos;re invited to <strong>{preview.calendarName}</strong> as <strong>{preview.role}</strong>
-            {preview.email ? <> (for {preview.email})</> : null}.
+            You&apos;re invited to <strong>{preview.calendarName}</strong>
+            {preview.ownerName ? <> (owner: {preview.ownerName})</> : null}
+            {' '}as <strong>{preview.role}</strong>
+            {preview.invitedUsername
+              ? <> for @{preview.invitedUsername}</>
+              : preview.email
+                ? <> (for {preview.email})</>
+                : null}.
           </p>
           {error && <p className="invite-accept-error">{error}</p>}
           <button type="button" className="btn btn-primary" onClick={handleAccept} disabled={accepting}>

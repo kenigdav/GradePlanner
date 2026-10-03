@@ -69,7 +69,8 @@ function rowToInvite(row) {
   return {
     id: row.id,
     calendarId: row.calendar_id,
-    email: row.email,
+    email: row.email || '',
+    invitedUsername: row.invited_username || null,
     role: row.role,
     token: row.token,
     invitedByUserId: row.invited_by_user_id,
@@ -302,17 +303,32 @@ export const invites = {
     )
     return res.rows.map(rowToInvite)
   },
+  async getPendingForUser(email, username) {
+    await ensureSchema()
+    const res = await getPool().query(
+      `SELECT * FROM calendar_invites
+       WHERE status = 'pending'
+         AND (
+           (email <> '' AND LOWER(email) = LOWER($1))
+           OR (invited_username IS NOT NULL AND LOWER(invited_username) = LOWER($2))
+         )
+       ORDER BY created_at DESC`,
+      [email || '', username || '']
+    )
+    return res.rows.map(rowToInvite)
+  },
   async create(invite) {
     await ensureSchema()
     const id = randomUUID()
     await getPool().query(
       `INSERT INTO calendar_invites
-         (id, calendar_id, email, role, token, invited_by_user_id, status, created_at, expires_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), $8)`,
+         (id, calendar_id, email, invited_username, role, token, invited_by_user_id, status, created_at, expires_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), $9)`,
       [
         id,
         invite.calendarId,
-        invite.email,
+        invite.email || '',
+        invite.invitedUsername || null,
         invite.role,
         invite.token,
         invite.invitedByUserId,
@@ -324,13 +340,14 @@ export const invites = {
   },
   async update(id, updates) {
     await ensureSchema()
-    const allowed = ['status', 'role', 'email']
+    const allowed = ['status', 'role', 'email', 'invitedUsername']
     const setClauses = []
     const values = []
     let i = 1
     for (const k of allowed) {
       if (updates[k] === undefined) continue
-      setClauses.push(`${k} = $${i}`)
+      const col = k === 'invitedUsername' ? 'invited_username' : k
+      setClauses.push(`${col} = $${i}`)
       values.push(updates[k])
       i++
     }

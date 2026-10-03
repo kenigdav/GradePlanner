@@ -14,7 +14,8 @@ export function CalendarMembers({ onClose }) {
   const [invites, setInvites] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteMode, setInviteMode] = useState('username')
+  const [inviteValue, setInviteValue] = useState('')
   const [inviteRole, setInviteRole] = useState('viewer')
   const [inviteResult, setInviteResult] = useState(null)
   const [busy, setBusy] = useState(false)
@@ -47,14 +48,18 @@ export function CalendarMembers({ onClose }) {
 
   const handleInvite = async (e) => {
     e.preventDefault()
-    if (!calendarId || !inviteEmail.trim()) return
+    if (!calendarId || !inviteValue.trim()) return
     setBusy(true)
     setError('')
     setInviteResult(null)
     try {
-      const result = await calendarsApi.createInvite(calendarId, inviteEmail.trim(), inviteRole)
+      const payload =
+        inviteMode === 'username'
+          ? { username: inviteValue.trim(), role: inviteRole }
+          : { email: inviteValue.trim(), role: inviteRole }
+      const result = await calendarsApi.createInvite(calendarId, payload)
       setInviteResult(result)
-      setInviteEmail('')
+      setInviteValue('')
       await load()
     } catch (err) {
       setError(err.message || 'Failed to send invite')
@@ -118,6 +123,11 @@ export function CalendarMembers({ onClose }) {
     }
   }
 
+  const inviteLabel = (inv) => {
+    if (inv.invitedUsername) return `@${inv.invitedUsername}`
+    return inv.email || 'Unknown'
+  }
+
   return (
     <div className="calendar-members">
       <div className="calendar-members-header">
@@ -134,7 +144,9 @@ export function CalendarMembers({ onClose }) {
             <li key={m.userId} className="calendar-members-row">
               <div className="calendar-members-info">
                 <span className="calendar-members-name">{m.user?.fullName || m.user?.username || 'Unknown'}</span>
-                <span className="calendar-members-email">{m.user?.email}</span>
+                <span className="calendar-members-email">
+                  @{m.user?.username}{m.user?.email ? ` · ${m.user.email}` : ''}
+                </span>
               </div>
               {canManage ? (
                 <select
@@ -168,43 +180,69 @@ export function CalendarMembers({ onClose }) {
       {canManage && (
         <>
           <form className="calendar-members-invite" onSubmit={handleInvite}>
-            <h3>Invite by email</h3>
+            <h3>Invite someone</h3>
+            <div className="calendar-members-mode">
+              <button
+                type="button"
+                className={`btn btn-sm ${inviteMode === 'username' ? 'btn-primary' : 'btn-ghost'}`}
+                onClick={() => { setInviteMode('username'); setInviteValue(''); setInviteResult(null) }}
+              >
+                Username
+              </button>
+              <button
+                type="button"
+                className={`btn btn-sm ${inviteMode === 'email' ? 'btn-primary' : 'btn-ghost'}`}
+                onClick={() => { setInviteMode('email'); setInviteValue(''); setInviteResult(null) }}
+              >
+                Email
+              </button>
+            </div>
             <div className="calendar-members-invite-row">
               <input
-                type="email"
-                value={inviteEmail}
-                onChange={(e) => setInviteEmail(e.target.value)}
-                placeholder="email@example.com"
+                type={inviteMode === 'email' ? 'email' : 'text'}
+                value={inviteValue}
+                onChange={(e) => setInviteValue(e.target.value)}
+                placeholder={inviteMode === 'email' ? 'email@example.com' : 'username'}
                 required
                 disabled={busy}
+                autoComplete={inviteMode === 'email' ? 'email' : 'username'}
               />
               <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)} disabled={busy}>
                 {INVITE_ROLES.map((r) => (
                   <option key={r} value={r}>{r}</option>
                 ))}
               </select>
-              <button type="submit" className="btn btn-primary" disabled={busy || !inviteEmail.trim()}>
+              <button type="submit" className="btn btn-primary" disabled={busy || !inviteValue.trim()}>
                 Invite
               </button>
             </div>
+            <p className="calendar-members-invite-hint">
+              {inviteMode === 'username'
+                ? 'They’ll see a join preview on their home screen after signing in.'
+                : 'They’ll get an invite link by email (if email is configured).'}
+            </p>
           </form>
 
           {inviteResult && (
             <div className="calendar-members-invite-result">
-              {inviteResult.emailSent ? (
+              {inviteResult.inviteVia === 'username' || inviteResult.invitedUsername ? (
+                <p>{inviteResult.message || `Invite sent to @${inviteResult.invitedUsername}.`}</p>
+              ) : inviteResult.emailSent ? (
                 <p>Invite email sent to {inviteResult.email}.</p>
               ) : (
                 <p>
                   Invite created{inviteResult.emailError ? ` (email not sent: ${inviteResult.emailError})` : ' (email not configured)'}.
-                  Share this link:
+                  {inviteResult.inviteUrl ? ' Share this link:' : ''}
                 </p>
               )}
-              <div className="calendar-members-link-row">
-                <code>{inviteResult.inviteUrl}</code>
-                <button type="button" className="btn btn-sm btn-ghost" onClick={() => copyLink(inviteResult.inviteUrl)}>
-                  {inviteResult.copied ? 'Copied' : 'Copy'}
-                </button>
-              </div>
+              {inviteResult.inviteUrl && (
+                <div className="calendar-members-link-row">
+                  <code>{inviteResult.inviteUrl}</code>
+                  <button type="button" className="btn btn-sm btn-ghost" onClick={() => copyLink(inviteResult.inviteUrl)}>
+                    {inviteResult.copied ? 'Copied' : 'Copy'}
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -214,7 +252,7 @@ export function CalendarMembers({ onClose }) {
               <ul>
                 {invites.map((inv) => (
                   <li key={inv.id}>
-                    <span>{inv.email} ({inv.role})</span>
+                    <span>{inviteLabel(inv)} ({inv.role})</span>
                     <button type="button" className="btn btn-sm btn-ghost" disabled={busy} onClick={() => handleRevoke(inv.id)}>
                       Revoke
                     </button>

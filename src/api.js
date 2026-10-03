@@ -140,11 +140,11 @@ export const calendarsApi = {
     const res = await fetch(`${API_BASE}/calendars/${calendarId}/invites`, { headers: getHeaders() })
     return handleRes(res)
   },
-  async createInvite(calendarId, email, role) {
+  async createInvite(calendarId, { email, username, role }) {
     const res = await fetch(`${API_BASE}/calendars/${calendarId}/invites`, {
       method: 'POST',
       headers: getHeaders(),
-      body: JSON.stringify({ email, role }),
+      body: JSON.stringify({ email, username, role }),
     })
     return handleRes(res)
   },
@@ -159,6 +159,10 @@ export const calendarsApi = {
 }
 
 export const invitesApi = {
+  async listPending() {
+    const res = await fetch(`${API_BASE}/invites/pending`, { headers: getHeaders() })
+    return handleRes(res)
+  },
   async preview(token) {
     const res = await fetch(`${API_BASE}/invites/${encodeURIComponent(token)}`, {
       headers: getHeaders(false),
@@ -167,6 +171,14 @@ export const invitesApi = {
   },
   async accept(token) {
     const res = await fetch(`${API_BASE}/invites/accept`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ token }),
+    })
+    return handleRes(res)
+  },
+  async decline(token) {
+    const res = await fetch(`${API_BASE}/invites/decline`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({ token }),

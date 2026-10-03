@@ -33,7 +33,8 @@ CREATE INDEX IF NOT EXISTS calendar_members_user_id ON calendar_members (user_id
 CREATE TABLE IF NOT EXISTS calendar_invites (
   id UUID PRIMARY KEY,
   calendar_id UUID NOT NULL REFERENCES calendars(id) ON DELETE CASCADE,
-  email TEXT NOT NULL,
+  email TEXT NOT NULL DEFAULT '',
+  invited_username TEXT,
   role TEXT NOT NULL,
   token TEXT NOT NULL UNIQUE,
   invited_by_user_id UUID NOT NULL,
@@ -42,8 +43,12 @@ CREATE TABLE IF NOT EXISTS calendar_invites (
   expires_at TIMESTAMPTZ
 );
 
+ALTER TABLE calendar_invites ADD COLUMN IF NOT EXISTS invited_username TEXT;
+ALTER TABLE calendar_invites ALTER COLUMN email SET DEFAULT '';
+
 CREATE INDEX IF NOT EXISTS calendar_invites_calendar_id ON calendar_invites (calendar_id);
 CREATE INDEX IF NOT EXISTS calendar_invites_email_lower ON calendar_invites (LOWER(email));
+CREATE INDEX IF NOT EXISTS calendar_invites_username_lower ON calendar_invites (LOWER(invited_username));
 
 CREATE TABLE IF NOT EXISTS assignments (
   id UUID PRIMARY KEY,

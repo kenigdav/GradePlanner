@@ -89,3 +89,90 @@
   margin: 0 0 1.25rem;
   color: var(--text-muted, #888);
 }
+
+.calendar-picker-invites {
+  margin: 0 0 1.5rem;
+}
+
+.calendar-picker-invites h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.05rem;
+}
+
+.calendar-invite-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.calendar-invite-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 6px);
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  background: var(--bg, transparent);
+}
+
+.calendar-invite-card-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.calendar-invite-name {
+  font-weight: 650;
+  font-size: 1.05rem;
+}
+
+.calendar-invite-owner,
+.calendar-invite-role {
+  font-size: 0.85rem;
+  opacity: 0.8;
+  text-transform: none;
+}
+
+.calendar-invite-role {
+  text-transform: capitalize;
+}
+
+.calendar-invite-preview {
+  border-top: 1px solid var(--border);
+  padding-top: 0.55rem;
+}
+
+.calendar-invite-preview ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.calendar-invite-preview li {
+  display: flex;
+  gap: 0.65rem;
+  font-size: 0.88rem;
+}
+
+.calendar-invite-preview-date {
+  min-width: 3.5rem;
+  opacity: 0.7;
+}
+
+.calendar-invite-preview-empty {
+  margin: 0;
+  font-size: 0.85rem;
+  opacity: 0.65;
+}
+
+.calendar-invite-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}

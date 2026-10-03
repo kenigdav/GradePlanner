@@ -36,7 +36,9 @@ function invitePublic(inv, calendarName) {
     id: inv.id,
     calendarId: inv.calendarId,
     calendarName: calendarName || null,
-    email: inv.email,
+    email: inv.email || '',
+    invitedUsername: inv.invitedUsername || null,
+    inviteVia: inv.invitedUsername ? 'username' : 'email',
     role: inv.role,
     status: inv.status,
     createdAt: inv.createdAt,
@@ -232,16 +234,42 @@ router.post(
   requireCalendarRole('owner'),
   async (req, res, next) => {
     try {
-      const email = (req.body?.email != null && String(req.body.email).trim().toLowerCase()) || ''
+      const emailInput = (req.body?.email != null && String(req.body.email).trim().toLowerCase()) || ''
+      const usernameInput =
+        (req.body?.username != null && String(req.body.username).trim()) || ''
       const role = req.body?.role || 'viewer'
-      if (!email || !email.includes('@')) {
+
+      if (!emailInput && !usernameInput) {
+        return res.status(400).json({ error: 'Email or username is required' })
+      }
+      if (emailInput && usernameInput) {
+        return res.status(400).json({ error: 'Provide either email or username, not both' })
+      }
+      if (emailInput && !emailInput.includes('@')) {
         return res.status(400).json({ error: 'A valid email is required' })
       }
       if (!INVITE_ROLES.includes(role)) {
         return res.status(400).json({ error: 'Invite role must be editor or viewer' })
       }
 
-      const existingUser = await usersStore.getByEmail(email)
+      let email = emailInput
+      let invitedUsername = null
+      let existingUser = null
+
+      if (usernameInput) {
+        existingUser = await usersStore.getByUsername(usernameInput)
+        if (!existingUser) {
+          return res.status(404).json({ error: 'No user found with that username' })
+        }
+        if (existingUser.banned) {
+          return res.status(400).json({ error: 'That user cannot be invited' })
+        }
+        invitedUsername = existingUser.username
+        email = existingUser.email || ''
+      } else {
+        existingUser = await usersStore.getByEmail(email)
+      }
+
       if (existingUser) {
         const already = await membersStore.get(req.calendarId, existingUser.id)
         if (already) {
@@ -249,9 +277,16 @@ router.post(
         }
       }
 
-      const pending = (await invitesStore.getByCalendar(req.calendarId)).filter(
-        (i) => i.status === 'pending' && i.email.toLowerCase() === email
-      )
+      const pending = (await invitesStore.getByCalendar(req.calendarId)).filter((i) => {
+        if (i.status !== 'pending') return false
+        if (invitedUsername) {
+          return (
+            (i.invitedUsername && i.invitedUsername.toLowerCase() === invitedUsername.toLowerCase()) ||
+            (email && i.email && i.email.toLowerCase() === email.toLowerCase())
+          )
+        }
+        return i.email && i.email.toLowerCase() === email
+      })
       for (const old of pending) {
         await invitesStore.update(old.id, { status: 'revoked' })
       }
@@ -261,6 +296,7 @@ router.post(
       const invite = await invitesStore.create({
         calendarId: req.calendarId,
         email,
+        invitedUsername,
         role,
         token,
         invitedByUserId: req.user.id,
@@ -273,14 +309,18 @@ router.post(
       let emailSent = false
       let emailError = null
 
-      if (isEmailConfigured()) {
+      // Username invites show on the home screen; still email if we have an address + SMTP
+      if (email && isEmailConfigured()) {
         try {
           const inviter = req.user.fullName || req.user.username
+          const viaNote = invitedUsername
+            ? `\nYou can also join from the home screen after signing in as ${invitedUsername}.`
+            : ''
           await sendMail({
             to: email,
             subject: `You're invited to ${calendar.name} on Assignment Planner`,
-            text: `${inviter} invited you to the calendar "${calendar.name}" as ${role}.\n\nOpen this link to accept:\n${inviteUrl}\n\nThis invite expires in ${INVITE_DAYS} days.`,
-            html: `<p>${inviter} invited you to the calendar <strong>${calendar.name}</strong> as <strong>${role}</strong>.</p><p><a href="${inviteUrl}">Accept invitation</a></p><p>This invite expires in ${INVITE_DAYS} days.</p>`,
+            text: `${inviter} invited you to the calendar "${calendar.name}" as ${role}.\n\nOpen this link to accept:\n${inviteUrl}${viaNote}\n\nThis invite expires in ${INVITE_DAYS} days.`,
+            html: `<p>${inviter} invited you to the calendar <strong>${calendar.name}</strong> as <strong>${role}</strong>.</p><p><a href="${inviteUrl}">Accept invitation</a></p>${invitedUsername ? `<p>Or join from the home screen after signing in as <strong>${invitedUsername}</strong>.</p>` : ''}<p>This invite expires in ${INVITE_DAYS} days.</p>`,
           })
           emailSent = true
         } catch (err) {
@@ -291,9 +331,12 @@ router.post(
 
       res.status(201).json({
         ...invitePublic(invite, calendar.name),
-        inviteUrl,
+        inviteUrl: invitedUsername ? null : inviteUrl,
         emailSent,
         emailError,
+        message: invitedUsername
+          ? `${invitedUsername} will see this invite on their home screen.`
+          : undefined,
       })
     } catch (err) {
       next(err)

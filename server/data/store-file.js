@@ -174,12 +174,24 @@ export const invites = {
   getByCalendar(calendarId) {
     return invites.getAll().filter((i) => i.calendarId === calendarId)
   },
+  getPendingForUser(email, username) {
+    const emailLower = (email || '').toLowerCase()
+    const usernameLower = (username || '').toLowerCase()
+    return invites.getAll().filter((i) => {
+      if (i.status !== 'pending') return false
+      const byEmail = i.email && emailLower && i.email.toLowerCase() === emailLower
+      const byUsername =
+        i.invitedUsername && usernameLower && i.invitedUsername.toLowerCase() === usernameLower
+      return byEmail || byUsername
+    })
+  },
   create(invite) {
     const all = invites.getAll()
     const row = {
       id: randomUUID(),
       calendarId: invite.calendarId,
-      email: invite.email,
+      email: invite.email || '',
+      invitedUsername: invite.invitedUsername || null,
       role: invite.role,
       token: invite.token,
       invitedByUserId: invite.invitedByUserId,
