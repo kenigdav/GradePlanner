@@ -15,11 +15,33 @@ import {
   INVITE_ROLES,
 } from '../middleware/auth.js'
 import { isEmailConfigured, sendMail } from '../lib/email.js'
+import { generateJoinCode, normalizeJoinCode } from '../lib/joinCode.js'
 import * as sse from '../lib/sse.js'
 
 const router = Router()
 
 const INVITE_DAYS = 14
+
+async function ensureJoinCode(calendar) {
+  if (!calendar) return null
+  if (calendar.joinCode) return calendar
+  for (let attempt = 0; attempt < 12; attempt++) {
+    const code = generateJoinCode(8)
+    const taken = await calendarsStore.getByJoinCode(code)
+    if (taken) continue
+    return calendarsStore.update(calendar.id, { joinCode: code })
+  }
+  throw new Error('Could not generate a unique join code')
+}
+
+async function allocateJoinCode() {
+  for (let attempt = 0; attempt < 12; attempt++) {
+    const code = generateJoinCode(8)
+    const taken = await calendarsStore.getByJoinCode(code)
+    if (!taken) return code
+  }
+  throw new Error('Could not generate a unique join code')
+}
 
 function publicUser(u) {
   if (!u) return null
@@ -86,7 +108,8 @@ router.get('/', authMiddleware, requireApprovedUser, async (req, res, next) => {
             role: 'owner',
           })
         }
-        return { ...c, myRole: membership?.role || null }
+        const withCode = await ensureJoinCode(c)
+        return { ...withCode, myRole: membership?.role || null }
       })
     )
     res.json(withRole)
@@ -101,9 +124,11 @@ router.post('/', authMiddleware, requireApprovedUser, async (req, res, next) => 
     if (!name) {
       return res.status(400).json({ error: 'Calendar name is required' })
     }
+    const joinCode = await allocateJoinCode()
     const calendar = await calendarsStore.create({
       name,
       createdByUserId: req.user.id,
+      joinCode,
     })
     await membersStore.add({
       calendarId: calendar.id,
@@ -116,10 +141,38 @@ router.post('/', authMiddleware, requireApprovedUser, async (req, res, next) => 
   }
 })
 
+/** Join a calendar with its public join code (no owner approval). */
+router.post('/join', authMiddleware, requireApprovedUser, async (req, res, next) => {
+  try {
+    const code = normalizeJoinCode(req.body?.code)
+    if (!code || code.length < 4) {
+      return res.status(400).json({ error: 'Enter a valid calendar join code' })
+    }
+    let calendar = await calendarsStore.getByJoinCode(code)
+    if (!calendar) {
+      return res.status(404).json({ error: 'No calendar found with that code' })
+    }
+    const existing = await membersStore.get(calendar.id, req.user.id)
+    if (existing) {
+      return res.json({ ...calendar, myRole: existing.role, alreadyMember: true })
+    }
+    await membersStore.add({
+      calendarId: calendar.id,
+      userId: req.user.id,
+      role: 'viewer',
+    })
+    calendar = await ensureJoinCode(calendar)
+    res.status(201).json({ ...calendar, myRole: 'viewer', alreadyMember: false })
+  } catch (err) {
+    next(err)
+  }
+})
+
 router.get('/:id', authMiddleware, requireApprovedUser, requireCalendarMember, async (req, res, next) => {
   try {
-    const calendar = await calendarsStore.getById(req.calendarId)
+    let calendar = await calendarsStore.getById(req.calendarId)
     if (!calendar) return res.status(404).json({ error: 'Calendar not found' })
+    calendar = await ensureJoinCode(calendar)
     res.json({ ...calendar, myRole: req.membership.role })
   } catch (err) {
     next(err)
@@ -171,7 +224,9 @@ router.get('/:id/members', authMiddleware, requireApprovedUser, requireCalendarM
   }
 })
 
-/** Add an existing user to this calendar by username (no email needed). */
+/**
+ * Invite an existing user by username. They must accept/decline on their home screen.
+ */
 router.post(
   '/:id/members',
   authMiddleware,
@@ -186,8 +241,8 @@ router.post(
       if (!username) {
         return res.status(400).json({ error: 'Username is required' })
       }
-      if (!CALENDAR_ROLES.includes(role)) {
-        return res.status(400).json({ error: 'Role must be owner, editor, or viewer' })
+      if (!INVITE_ROLES.includes(role)) {
+        return res.status(400).json({ error: 'Invite role must be editor or viewer' })
       }
 
       const target = await usersStore.getByUsername(username)
@@ -195,10 +250,10 @@ router.post(
         return res.status(404).json({ error: 'No user found with that username' })
       }
       if (target.banned) {
-        return res.status(400).json({ error: 'That user cannot be added' })
+        return res.status(400).json({ error: 'That user cannot be invited' })
       }
-      if (target.role === 'pending') {
-        return res.status(400).json({ error: 'That account is still pending approval' })
+      if (target.id === req.user.id) {
+        return res.status(400).json({ error: 'You are already in this calendar' })
       }
 
       const already = await membersStore.get(req.calendarId, target.id)
@@ -206,28 +261,35 @@ router.post(
         return res.status(409).json({ error: 'That user is already a member of this calendar' })
       }
 
-      const membership = await membersStore.add({
-        calendarId: req.calendarId,
-        userId: target.id,
-        role,
-      })
-
-      // Clear any pending invites for this user on this calendar
       const pending = (await invitesStore.getByCalendar(req.calendarId)).filter((i) => {
         if (i.status !== 'pending') return false
-        const byUsername =
-          i.invitedUsername && i.invitedUsername.toLowerCase() === target.username.toLowerCase()
-        const byEmail = i.email && target.email && i.email.toLowerCase() === target.email.toLowerCase()
-        return byUsername || byEmail
+        return (
+          (i.invitedUsername && i.invitedUsername.toLowerCase() === target.username.toLowerCase()) ||
+          (i.email && target.email && i.email.toLowerCase() === target.email.toLowerCase())
+        )
       })
       for (const old of pending) {
-        await invitesStore.update(old.id, { status: 'accepted' })
+        await invitesStore.update(old.id, { status: 'revoked' })
       }
 
+      const token = randomBytes(24).toString('hex')
+      const expiresAt = new Date(Date.now() + INVITE_DAYS * 24 * 60 * 60 * 1000).toISOString()
+      const invite = await invitesStore.create({
+        calendarId: req.calendarId,
+        email: target.email || '',
+        invitedUsername: target.username,
+        role,
+        token,
+        invitedByUserId: req.user.id,
+        status: 'pending',
+        expiresAt,
+      })
+
+      const calendar = await calendarsStore.getById(req.calendarId)
       res.status(201).json({
-        userId: membership.userId,
-        role: membership.role,
+        ...invitePublic(invite, calendar?.name),
         user: publicUser(target),
+        message: `@${target.username} will see this invite on their home screen to accept or decline.`,
       })
     } catch (err) {
       next(err)

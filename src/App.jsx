@@ -417,7 +417,10 @@ export default function App() {
       <header className="header">
         <div className="header-inner">
           <h1>{activeCalendar?.name || 'Assignment Planner'}</h1>
-          <p className="tagline">Track due dates by subject</p>
+          <p className="tagline">
+            Track due dates by subject
+            {activeCalendar?.joinCode ? ` · Code ${activeCalendar.joinCode}` : ''}
+          </p>
           <div className="header-menu-wrap">
             <button
               type="button"

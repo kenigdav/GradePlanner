@@ -5,7 +5,7 @@ import { useCalendar } from './CalendarContext'
 import './CalendarMembers.css'
 
 const ROLE_OPTIONS = ['owner', 'editor', 'viewer']
-const ADD_ROLES = ['owner', 'editor', 'viewer']
+const INVITE_ROLES = ['editor', 'viewer']
 
 export function CalendarMembers({ onClose }) {
   const { user } = useAuth()
@@ -18,8 +18,10 @@ export function CalendarMembers({ onClose }) {
   const [addRole, setAddRole] = useState('viewer')
   const [success, setSuccess] = useState('')
   const [busy, setBusy] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   const calendarId = activeCalendar?.id || activeCalendarId
+  const joinCode = activeCalendar?.joinCode || ''
 
   const load = async () => {
     if (!calendarId) return
@@ -50,7 +52,7 @@ export function CalendarMembers({ onClose }) {
     load()
   }, [calendarId, canManage])
 
-  const handleAdd = async (e) => {
+  const handleInvite = async (e) => {
     e.preventDefault()
     if (!calendarId) return
     const cleaned = username.trim().replace(/^@+/, '')
@@ -59,14 +61,13 @@ export function CalendarMembers({ onClose }) {
     setError('')
     setSuccess('')
     try {
-      const added = await calendarsApi.addMember(calendarId, cleaned, addRole)
-      const label = added.user?.username || cleaned
-      setSuccess(`Added @${label} as ${addRole}.`)
+      const result = await calendarsApi.addMember(calendarId, cleaned, addRole)
+      const label = result.user?.username || result.invitedUsername || cleaned
+      setSuccess(result.message || `Invite sent to @${label}. They can accept on their home screen.`)
       setUsername('')
       await load()
-      await refreshCalendars()
     } catch (err) {
-      setError(err.message || 'Failed to add member')
+      setError(err.message || 'Failed to invite member')
     } finally {
       setBusy(false)
     }
@@ -120,6 +121,17 @@ export function CalendarMembers({ onClose }) {
     }
   }
 
+  const copyJoinCode = async () => {
+    if (!joinCode) return
+    try {
+      await navigator.clipboard.writeText(joinCode)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      /* ignore */
+    }
+  }
+
   const inviteLabel = (inv) => {
     if (inv.invitedUsername) return `@${inv.invitedUsername}`
     return inv.email || 'Unknown'
@@ -131,6 +143,23 @@ export function CalendarMembers({ onClose }) {
         <h2>Members — {activeCalendar?.name}</h2>
         <button type="button" className="btn btn-ghost" onClick={onClose} aria-label="Close">×</button>
       </div>
+
+      {joinCode && (
+        <div className="calendar-members-code">
+          <div>
+            <h3>Join code</h3>
+            <p className="calendar-members-invite-hint">
+              Anyone signed in can enter this code on the home screen to join as a viewer.
+            </p>
+          </div>
+          <div className="calendar-members-code-row">
+            <code className="calendar-members-code-value">{joinCode}</code>
+            <button type="button" className="btn btn-sm btn-ghost" onClick={copyJoinCode}>
+              {copied ? 'Copied' : 'Copy'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {error && <p className="calendar-members-error">{error}</p>}
       {success && <p className="calendar-members-success">{success}</p>}
@@ -175,8 +204,8 @@ export function CalendarMembers({ onClose }) {
 
       {canManage && (
         <>
-          <form className="calendar-members-invite" onSubmit={handleAdd}>
-            <h3>Add by username</h3>
+          <form className="calendar-members-invite" onSubmit={handleInvite}>
+            <h3>Invite by username</h3>
             <div className="calendar-members-invite-row">
               <input
                 type="text"
@@ -189,17 +218,16 @@ export function CalendarMembers({ onClose }) {
                 aria-label="Username"
               />
               <select value={addRole} onChange={(e) => setAddRole(e.target.value)} disabled={busy}>
-                {ADD_ROLES.map((r) => (
+                {INVITE_ROLES.map((r) => (
                   <option key={r} value={r}>{r}</option>
                 ))}
               </select>
               <button type="submit" className="btn btn-primary" disabled={busy || !username.trim()}>
-                Add
+                Invite
               </button>
             </div>
             <p className="calendar-members-invite-hint">
-              Enter their exact account username (no email). They get access right away.
-              Use role <strong>owner</strong> if you want them to administer this calendar.
+              They’ll see the invite on their home screen and can accept or decline.
             </p>
           </form>
 

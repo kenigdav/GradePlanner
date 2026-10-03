@@ -79,6 +79,10 @@ export const calendars = {
   getById(id) {
     return calendars.getAll().find((c) => c.id === id) ?? null
   },
+  getByJoinCode(joinCode) {
+    const code = String(joinCode || '').toUpperCase()
+    return calendars.getAll().find((c) => c.joinCode && String(c.joinCode).toUpperCase() === code) ?? null
+  },
   getForUser(userId) {
     const memberCalendarIds = new Set(
       members.getAll().filter((m) => m.userId === userId).map((m) => m.calendarId)
@@ -92,6 +96,7 @@ export const calendars = {
       name: calendar.name,
       createdByUserId: calendar.createdByUserId,
       createdAt: new Date().toISOString(),
+      joinCode: calendar.joinCode || null,
     }
     all.push(newOne)
     writeJson(CALENDARS_FILE, all)
@@ -102,6 +107,7 @@ export const calendars = {
     const i = all.findIndex((c) => c.id === id)
     if (i === -1) return null
     if (updates.name !== undefined) all[i].name = updates.name
+    if (updates.joinCode !== undefined) all[i].joinCode = updates.joinCode
     writeJson(CALENDARS_FILE, all)
     return all[i]
   },

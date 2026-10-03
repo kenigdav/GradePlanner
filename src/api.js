@@ -127,6 +127,12 @@ export const calendarsApi = {
       body: JSON.stringify({ name }),
     })
   },
+  async joinWithCode(code) {
+    return authFetch(`${API_BASE}/calendars/join`, {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    })
+  },
   async update(id, name) {
     return authFetch(`${API_BASE}/calendars/${id}`, {
       method: 'PATCH',

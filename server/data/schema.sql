@@ -18,8 +18,12 @@ CREATE TABLE IF NOT EXISTS calendars (
   id UUID PRIMARY KEY,
   name TEXT NOT NULL,
   created_by_user_id UUID NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  join_code TEXT
 );
+
+ALTER TABLE calendars ADD COLUMN IF NOT EXISTS join_code TEXT;
+CREATE UNIQUE INDEX IF NOT EXISTS calendars_join_code_unique ON calendars (join_code) WHERE join_code IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS calendar_members (
   calendar_id UUID NOT NULL REFERENCES calendars(id) ON DELETE CASCADE,

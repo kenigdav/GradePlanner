@@ -141,6 +141,35 @@
   margin: 0 0 0.75rem;
 }
 
+.calendar-members-code {
+  margin: 0 0 1.25rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 6px);
+}
+
+.calendar-members-code h3 {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+}
+
+.calendar-members-code-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.65rem;
+}
+
+.calendar-members-code-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  padding: 0.35rem 0.6rem;
+  border-radius: var(--radius-sm, 6px);
+  background: var(--bg, #0f0f12);
+}
+
 .calendar-members-loading {
   opacity: 0.75;
 }

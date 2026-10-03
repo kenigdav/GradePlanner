@@ -52,6 +52,7 @@ function rowToCalendar(row) {
     name: row.name,
     createdByUserId: row.created_by_user_id,
     createdAt: row.created_at ? new Date(row.created_at).toISOString() : null,
+    joinCode: row.join_code || null,
   }
 }
 
@@ -174,6 +175,14 @@ export const calendars = {
     const res = await getPool().query('SELECT * FROM calendars WHERE id = $1', [id])
     return rowToCalendar(res.rows[0])
   },
+  async getByJoinCode(joinCode) {
+    await ensureSchema()
+    const res = await getPool().query(
+      'SELECT * FROM calendars WHERE UPPER(join_code) = UPPER($1)',
+      [joinCode]
+    )
+    return rowToCalendar(res.rows[0])
+  },
   async getForUser(userId) {
     await ensureSchema()
     const res = await getPool().query(
@@ -189,16 +198,28 @@ export const calendars = {
     await ensureSchema()
     const id = randomUUID()
     await getPool().query(
-      `INSERT INTO calendars (id, name, created_by_user_id, created_at)
-       VALUES ($1, $2, $3, NOW())`,
-      [id, calendar.name, calendar.createdByUserId]
+      `INSERT INTO calendars (id, name, created_by_user_id, created_at, join_code)
+       VALUES ($1, $2, $3, NOW(), $4)`,
+      [id, calendar.name, calendar.createdByUserId, calendar.joinCode || null]
     )
     return this.getById(id)
   },
   async update(id, updates) {
     await ensureSchema()
-    if (updates.name === undefined) return this.getById(id)
-    await getPool().query('UPDATE calendars SET name = $1 WHERE id = $2', [updates.name, id])
+    const allowed = ['name', 'joinCode']
+    const setClauses = []
+    const values = []
+    let i = 1
+    for (const k of allowed) {
+      if (updates[k] === undefined) continue
+      const col = k === 'joinCode' ? 'join_code' : k
+      setClauses.push(`${col} = $${i}`)
+      values.push(updates[k])
+      i++
+    }
+    if (setClauses.length === 0) return this.getById(id)
+    values.push(id)
+    await getPool().query(`UPDATE calendars SET ${setClauses.join(', ')} WHERE id = $${i}`, values)
     return this.getById(id)
   },
   async delete(id) {
